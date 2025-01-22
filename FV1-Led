@@ -1,8 +1,8 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
 #include <SPI.h>
+#include <Encoder.h>
 #include <EEPROM.h>
-//#include <avr/interrupt.h> // For PCINT setup
 
 #define DEBUG 1    // ON/OFF switch
 
@@ -18,20 +18,21 @@
 #define tftCS   10
 #define tftRST   9
 #define tftDC    8
-
 Adafruit_ST7735 tft = Adafruit_ST7735(tftCS, tftDC, tftRST);
 
 // Encoder Pins
 #define pinEncoderCW   2
 #define pinEncoderCCW  3
-#define pinButtonEnter 4 // Button Pin for PCINT
+//#define pinButtonParam1 4  
+//#define pinButtonParam2 5
+//#define pinButtonParam2 6 
 
-// Input Signal Pin
-#define AUDIO_INPUT_PIN A0
+// Encoder Setup
+Encoder myEnc(pinEncoderCW, pinEncoderCCW);
 
-// Variables for encoder state
-volatile int16_t encoderValue = 0;
-volatile uint8_t lastEncoderState = 0;
+//volatile bool buttonPressed            = false;
+//volatile unsigned long buttonPressTime = 0;
+//volatile bool longPressActive          = false;
 
 // Array Definition
 struct Item {
@@ -40,12 +41,10 @@ struct Item {
 };
 Item items[24];
 
-int currentItem     = 0; // Last selected effect index
-int currentParam    = 0;
-bool editingMode    = false;
-bool displayVUMeter = false;
+int currentItem   = 0; // Last selected effect index
+int currentParam  = 0;
+bool editingMode  = false;
 unsigned long lastInteractionTime = 0;
-volatile bool buttonPressed       = false;
 
 // EEPROM Addresses
 #define EEPROM_SIGNATURE_ADDR    0
@@ -53,50 +52,7 @@ volatile bool buttonPressed       = false;
 #define EEPROM_PARAMS_START_ADDR 2
 #define EEPROM_SIGNATURE      0xA5
 
-// Function Prototypes
-void drawFrame();
-void drawItem();
-void drawEditMode();
-void drawVUMeter();
-void saveParameters();
-void loadParameters();
-void saveLastSelectedEffect();
-void loadLastSelectedEffect();
-void OnButtonPress();
-void OnEncoder();
-
-//TMO ISR
-int lastCount = 50; // Keep track of last rotary value
-volatile int virtualPosition = 50; // Updated by the ISR (Interrupt Service Routine)
-
-/*// ISR for INT0 (Encoder Pin A)
-ISR(INT0_vect) {
-  uint8_t state = (digitalRead(pinEncoderCW) << 1) | digitalRead(pinEncoderCCW);
-  if ((lastEncoderState == 0b00 && state == 0b01) || 
-      (lastEncoderState == 0b01 && state == 0b11) || 
-      (lastEncoderState == 0b11 && state == 0b10) || 
-      (lastEncoderState == 0b10 && state == 0b00)) {
-    encoderValue++;
-  } else {
-    encoderValue--;
-  }
-  lastEncoderState = state;
-}
-
-// ISR for INT1 (Encoder Pin B)
-ISR(INT1_vect) {
-  uint8_t state = (digitalRead(pinEncoderCW) << 1) | digitalRead(pinEncoderCCW);
-  if ((lastEncoderState == 0b00 && state == 0b01) || 
-      (lastEncoderState == 0b01 && state == 0b11) || 
-      (lastEncoderState == 0b11 && state == 0b10) || 
-      (lastEncoderState == 0b10 && state == 0b00)) {
-    encoderValue++;
-  } else {
-    encoderValue--;
-  }
-  lastEncoderState = state;
-} */
-
+//
 void setup() {
   // Serial for debugging
   Serial.begin(9600);
@@ -106,24 +62,15 @@ void setup() {
   tft.setRotation(1); // Horizontal mode
   tft.fillScreen(ST77XX_BLACK);
 
-  // Configure encoder pins
-  pinMode(pinEncoderCW,   INPUT_PULLUP);
-  pinMode(pinEncoderCCW,  INPUT_PULLUP);
-  pinMode(pinButtonEnter, INPUT_PULLUP); // Switch is floating so use the in-built PULLUP so we don't need a resistor
-  attachInterrupt(digitalPinToInterrupt(pinEncoderCW), isr, LOW);
-
-/*
-  EICRA |= (1 << ISC00); // Trigger INT0 on any logical change
-  EIMSK |= (1 << INT0);  // Enable INT0
-  EICRA |= (1 << ISC10); // Trigger INT1 on any logical change
-  EIMSK |= (1 << INT1);  // Enable INT1
-*/
+  // Configure button and encoder
+  //pinMode(BUTTON_PIN, INPUT_PULLUP);  // Button with pull-up
+  //attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonInterrupt, FALLING);
 
   // Initialize Items with the requested names
   String names[24] = {
-    "CHORUS.0", "REVERB.a0", "REVERB.b0", "Tremo.a0", "Tremo.b0", "Flanger.0", "PitchOct.0", "Distort.0",
-    "CHORUS.1", "REVERB.a1", "REVERB.b1", "Tremo.a1", "Tremo.b1", "Flanger.1", "PitchOct.1", "Distort.1",
-    "CHORUS.2", "REVERB.a2", "REVERB.b2", "Tremo.a2", "Tremo.b2", "Flanger.2", "PitchOct.2", "Distort.2"
+    "CHORUS.0", "REVERB.a0", "REVERB.b0", "Tremo.a0", "Tremo.b0", "Flanger.0", "PITCH\n   Octave.0", "DISTORTION\n   v0",
+    "CHORUS.1", "REVERB.a1", "REVERB.b1", "Tremo.a1", "Tremo.b1", "Flanger.1", "Pitch\n   Octave.1", "Distort.1",
+    "CHORUS.2", "REVERB.a2", "REVERB.b2", "Tremo.a2", "Tremo.b2", "Flanger.2", "Pitch\n   Octave.2", "Distort.2"
   };
 
   for (int i = 0; i < 24; i++) {
@@ -138,150 +85,39 @@ void setup() {
         items[i].params[j] = 100; // Default parameters
       }
     }
-    currentItem = 0; // Default to first effect
+    currentItem = 0;            // Default to first effect
     saveParameters();           // Save all parameters to EEPROM
     saveLastSelectedEffect();   // Save initial selected effect
     EEPROM.write(EEPROM_SIGNATURE_ADDR, EEPROM_SIGNATURE); // Write signature
   } else {
     // Load all parameters and last selected effect from EEPROM
     loadParameters();
-    loadLastSelectedEffect();
+    currentItem = loadLastSelectedEffect();
   }
-
   // Draw the initial screen
   drawItem();
 }
 
+// LOOP
 void loop() {
-
-/*
-  static int16_t lastEncoderValue = 0;
-
-  // Check encoder value
-  if (encoderValue != lastEncoderValue) {
-    lastEncoderValue = encoderValue;
-    currentItem = (currentItem + (encoderValue > lastEncoderValue ? 1 : -1) + 24) % 24;
+  static long lastPosition = -999;
+  long newPosition = myEnc.read() / 2; // Adjust for sensitivity
+ 
+  // Handle encoder rotation for item selection
+  if (newPosition != lastPosition) {
+    currentItem = (currentItem + (newPosition > lastPosition ? 1 : -1) + 24) % 24;
+    lastPosition = newPosition;                     // Update the last position
     drawItem();
     lastInteractionTime = millis();
   }
 
-  // Handle button press
-  if (digitalRead(pinButtonEnter) == LOW && !buttonPressed) {
-    buttonPressed = true;
-  } else if (digitalRead(pinButtonEnter) == HIGH) {
-    handleButtonPress();
-    buttonPressed = false;
-  }
-
-  // Editing Mode Logic
-  if (editingMode && !displayVUMeter) {
+  /*/ Editing Mode Logic
+  if (editingMode) {
     drawEditMode();
     lastInteractionTime = millis();
-  }
-
-  // Inactivity Timeout: Display VU Meter
-  if (millis() - lastInteractionTime > 15000 && !displayVUMeter) {
-    displayVUMeter = true;
-    drawVUMeter();
-  }
-  */
-
-    // Is someone pressing the rotar y switch?
-  if ((!digitalRead(pinButtonEnter))) {
-    virtualPosition = 50; 
-    while (!digitalRead(pinButtonEnter))
-      delay(10);
-    Serial.println("Reset");
-  }
-
-  // If the current rotary switch position has changed then update everything
-  if (virtualPosition != lastCount) {
-    // Write out to serial monitor the value and direction
-    Serial.print(virtualPosition > lastCount ? "Up  :" : "Down:");
-    Serial.println(virtualPosition);
-    // Keep track of this new value
-    lastCount = virtualPosition ;
-  }
+  } */
 }
 
-// INTERRUPT
-void isr ()  {
-  static unsigned long lastInterruptTime = 0;
-  unsigned long interruptTime = millis();
-
-  // If interrupts come faster than 5ms, assume it's a bounce and ignore
-  if (interruptTime - lastInterruptTime > 5) {
-    if (digitalRead(pinEncoderCCW) == LOW) {
-      virtualPosition-- ; // Could be -5 or -10
-    } else {
-      virtualPosition++ ; // Could be +5 or +10
-    }
-    // Restrict value from 0 to +100
-    //virtualPosition = min(100, max(0, virtualPosition));
-  }
-  // Keep track of when we were here last (no more than every 5ms)
-  lastInterruptTime = interruptTime;
-}
-
-void handleButtonPress() {
-
-  if (displayVUMeter) {
-     debugln("OnbtnPress - VUMeter");
-    // Exit VU Meter on button press
-    displayVUMeter = false;
-    drawItem();
-  } else if (!editingMode) {
-    debugln("On btn Press - EDIT Mode");
-    editingMode = true;
-    currentParam = 0;
-  } else {
-    currentParam = (currentParam + 1) % 3;
-    if (currentParam == 0) {
-      debugln("On bton Press - End of EDIT, leaving");
-      editingMode = false;
-      saveParameters();           // Save updated parameters
-      saveLastSelectedEffect();   // Save the last selected effect
-    }
-  }
-  lastInteractionTime = millis(); // Reset the inactivity timer
-}
-
-/*
-void OnEncoder() {
-  uint8_t encoderState = (digitalRead(pinEncoderCW) << 1) | digitalRead(pinEncoderCCW);
-  uint8_t change = (lastEncoderState << 2) | encoderState;
-
-  // Encoder quadrature state transitions
-  if (change == 0b0001 || change == 0b0111 || change == 0b1110 || change == 0b1000) {
-    encoderValue++;
-  } else if (change == 0b0010 || change == 0b0100 || change == 0b1011 || change == 0b1101) {
-    encoderValue--;
-  }
-
-  lastEncoderState = encoderState;
-}
-
-void OnButtonPress() {
-  if (displayVUMeter) {
-    // Exit VU Meter on button press
-    displayVUMeter = false;
-    drawItem();
-  } else if (!editMode) {
-    editMode = true;
-    currentParam = 0;
-  } else {
-    currentParam = (currentParam + 1) % 3;
-    if (currentParam == 0) {
-      editMode = false;
-      saveParameters();           // Save updated parameters
-      saveLastSelectedEffect();   // Save the last selected effect
-    }
-  }
-  lastInteractionTime = millis(); // Reset the inactivity timer
-}
-*/
-
-//
 void drawFrame() {
   tft.drawRect(0, 0, tft.width(), tft.height(), ST77XX_YELLOW); //MAGENTA
   tft.drawRect(1, 1, tft.width() - 2, tft.height() - 2, ST77XX_YELLOW);
@@ -290,7 +126,6 @@ void drawFrame() {
 
 //
 void drawItem() {
-  displayVUMeter = false; // Exit VU Meter on interaction
   tft.fillScreen(ST77XX_BLACK);
   drawFrame();
 
@@ -299,7 +134,7 @@ void drawItem() {
   tft.setTextSize(2);
 
   String effectText = String(currentItem + 1) + "." + items[currentItem].name;
-  int textX = (tft.width() - effectText.length() * 12) / 2; // Approx. 12 pixels per char
+  int textX = 10; //(tft.width() - effectText.length() * 12) / 2; // Approx. 12 pixels per char
   tft.setCursor(textX, 12);
   tft.println(effectText);
 
@@ -310,7 +145,7 @@ void drawItem() {
     if (editingMode && i == currentParam) {
       color = tft.color565(0, 0, 255); // Highlighted blue
     }
-    int barY = 50 + i * 25;
+    int barY = 60 + i * 16;
     // PARAM
     tft.setCursor(10, barY);
     tft.setTextColor(ST77XX_WHITE);
@@ -324,8 +159,7 @@ void drawItem() {
   }
 }
 
-/*/ Other functions remain unchanged...
-void drawEditMode_bak() {
+void drawEditMode() {
   static long lastPosition = -999;
   long newPosition = myEnc.read() / 4;
 
@@ -335,23 +169,30 @@ void drawEditMode_bak() {
   }
 
   drawItem(); // Refresh the screen with updated values
-} */
-
-void drawEditMode() {
-  static int16_t lastEncoderValue = 0;
-  // Check if the encoder value has changed
-  if (encoderValue != lastEncoderValue) {
-    lastEncoderValue = encoderValue;
-    // Update the parameter value based on the encoder's movement
-    items[currentItem].params[currentParam] = constrain(items[currentItem].params[currentParam] + (encoderValue > lastEncoderValue ? 1 : -1), 0, 100);
-    // Redraw the screen to reflect changes
-    drawItem();
-  }
-  // Update inactivity timeout
-  lastInteractionTime = millis();
 }
 
-// Drawing and EEPROM-related functions remain unchanged...
+/*/
+void buttonInterrupt() {
+  static unsigned long lastInterruptTime = 0;
+  unsigned long interruptTime = millis();
+
+  if (interruptTime - lastInterruptTime > 200) {
+    if (!editingMode) {
+      editingMode = true;
+      currentParam = 0;
+    } else {
+      currentParam = (currentParam + 1) % 3;
+      if (currentParam == 0) {
+        editingMode = false;
+        saveParameters();           // Save updated parameters
+        saveLastSelectedEffect();   // Save the last selected effect
+      }
+    }
+    lastInteractionTime = interruptTime;
+  }
+  lastInterruptTime = interruptTime;
+} */
+
 void saveParameters() {
   for (int i = 0; i < 24; i++) {
     for (int j = 0; j < 3; j++) {
@@ -374,38 +215,6 @@ void saveLastSelectedEffect() {
   EEPROM.update(EEPROM_LAST_EFFECT_ADDR, currentItem);
 }
 
-void loadLastSelectedEffect() {
-  currentItem = EEPROM.read(EEPROM_LAST_EFFECT_ADDR);
-}
-
-/*
-void drawVUMeter_Old() {
-  tft.fillScreen(ST77XX_BLACK);
-  drawFrame();
-
-  int audioValue = analogRead(AUDIO_INPUT_PIN);
-  int vuHeight = map(audioValue, 0, 1023, 0, tft.height() - 20);
-
-  tft.fillRect(tft.width() / 2 - 10, tft.height() - vuHeight, 20, vuHeight, ST77XX_RED);
-  tft.setCursor(5, tft.height() - 10);
-  tft.setTextColor(ST77XX_WHITE);
-  tft.setTextSize(1);
-  tft.print("dB");
-} */
-
-void drawVUMeter() {
-  tft.fillScreen(ST77XX_BLACK); // Clear the screen
-  drawFrame(); // Redraw the frame
-  // Read the audio input and map it to the width of the horizontal bar
-  int audioValue = analogRead(AUDIO_INPUT_PIN);
-  int barWidth = map(audioValue, 0, 1023, 0, tft.width() - 20); // Bar width mapped to screen width minus padding
-  // Draw the VU Meter label
-  tft.setCursor(10, tft.height() / 2 - 15);
-  tft.setTextColor(ST77XX_WHITE);
-  tft.setTextSize(1);
-  tft.println("VU Meter");
-  // Draw the horizontal bar background
-  tft.fillRect(10, tft.height() / 2 - 5, tft.width() - 20, 10, ST77XX_CYAN); // Background bar
-  // Draw the active part of the bar
-  tft.fillRect(10, tft.height() / 2 - 5, barWidth, 10, ST77XX_RED); // Active bar based on audio level
+int loadLastSelectedEffect() {
+  return EEPROM.read(EEPROM_LAST_EFFECT_ADDR);
 }
