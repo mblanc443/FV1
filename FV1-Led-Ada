@@ -1,3 +1,4 @@
+
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
 #include <SPI.h>
@@ -66,11 +67,10 @@ void setup() {
   //pinMode(BUTTON_PIN, INPUT_PULLUP);  // Button with pull-up
   //attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonInterrupt, FALLING);
 
-  // Initialize Items with the requested names
   String names[24] = {
-    "CHORUS.0", "REVERB.a0", "REVERB.b0", "Tremo.a0", "Tremo.b0", "Flanger.0", "PITCH\n   Octave.0", "DISTORTION\n   v0",
-    "CHORUS.1", "REVERB.a1", "REVERB.b1", "Tremo.a1", "Tremo.b1", "Flanger.1", "Pitch\n   Octave.1", "Distort.1",
-    "CHORUS.2", "REVERB.a2", "REVERB.b2", "Tremo.a2", "Tremo.b2", "Flanger.2", "Pitch\n   Octave.2", "Distort.2"
+    "CHORUS.0", "REVERB.a0", "REVERB.b0", "Tremo.a0", "Tremo.b0", "FLANGER\n  good.0", "PITCH\n   Octave.0", "DISTORT\n   fuzz.0",
+    "CHORUS.1", "REVERB.a1", "REVERB.b1", "Tremo.a1", "Tremo.b1", "FLANGER.1", "Pitch\n   Octave.1", "DISTORT\n    fuzz.1",
+    "CHORUS.2", "REVERB.a2", "REVERB.b2", "Tremo.a2", "Tremo.b2", "FLANGER.2", "Pitch\n   Octave.2", "DISTORT.2"
   };
 
   for (int i = 0; i < 24; i++) {
@@ -95,18 +95,20 @@ void setup() {
     currentItem = loadLastSelectedEffect();
   }
   // Draw the initial screen
-  drawItem();
+  drawFrame();     
+  //drawItem();
 }
 
 // LOOP
-void loop() {
+void loop() { 
   static long lastPosition = -999;
   long newPosition = myEnc.read() / 2; // Adjust for sensitivity
  
   // Handle encoder rotation for item selection
   if (newPosition != lastPosition) {
     currentItem = (currentItem + (newPosition > lastPosition ? 1 : -1) + 24) % 24;
-    lastPosition = newPosition;                     // Update the last position
+    lastPosition = newPosition; // Update the last position
+    //
     drawItem();
     lastInteractionTime = millis();
   }
@@ -119,22 +121,33 @@ void loop() {
 }
 
 void drawFrame() {
-  tft.drawRect(0, 0, tft.width(), tft.height(), ST77XX_YELLOW); //MAGENTA
-  tft.drawRect(1, 1, tft.width() - 2, tft.height() - 2, ST77XX_YELLOW);
-  tft.drawRect(2, 2, tft.width() - 4, tft.height() - 4, ST77XX_YELLOW);
+  // draw details
+  tft.setTextSize(1);
+  tft.setTextColor(ST77XX_WHITE);
+  //
+  for (int i = 0; i < 3; i++) {
+      int barY = 60 + i * 16;
+      // draw frame
+      tft.drawRect(i, i, tft.width()-i*2, tft.height() - i*2, ST77XX_YELLOW);
+      tft.setCursor(10, barY);
+      // print zero left of bar
+      tft.print("0");
+      // draw white rect around the param
+      tft.drawRect(20, barY, 100, 10, ST77XX_WHITE);
+  }
 }
 
 //
 void drawItem() {
-  tft.fillScreen(ST77XX_BLACK);
-  drawFrame();
-
   // Centered Title (Effect Number and Name)
   tft.setTextColor(ST77XX_BLUE);
   tft.setTextSize(2);
 
   String effectText = String(currentItem + 1) + "." + items[currentItem].name;
-  int textX = 10; //(tft.width() - effectText.length() * 12) / 2; // Approx. 12 pixels per char
+  int textX = 10;
+  // erase previous info
+  tft.fillRect(5,5,150,50,tft.color565(0, 0, 0));
+  // print current effect
   tft.setCursor(textX, 12);
   tft.println(effectText);
 
@@ -146,15 +159,15 @@ void drawItem() {
       color = tft.color565(0, 0, 255); // Highlighted blue
     }
     int barY = 60 + i * 16;
+    
     // PARAM
-    tft.setCursor(10, barY);
     tft.setTextColor(ST77XX_WHITE);
-    tft.print("0"); // Left of bar
-    tft.fillRect(20, barY, items[currentItem].params[i], 10, color); // Horizontal blue bar
-    tft.drawRect(20, barY, 100, 10, ST77XX_WHITE);
-    // NAME
-    tft.setCursor(130, barY); // Right of bar
-    tft.print(items[currentItem].params[i]);
+    tft.fillRect(21, barY+1, 98, 6, tft.color565(0, 0, 0)); // erase prev. data
+    tft.fillRect(21, barY+1, items[currentItem].params[i]-2, 4, color); // Horizontal blue bar
+    // erase prev. percent number
+    tft.fillRect(126, barY, 20, 10, tft.color565(0, 0, 0)); 
+    tft.setCursor(128, barY); // Right of bar
+    tft.print(items[currentItem].params[i]); // number of percents of the right
     tft.print("%");
   }
 }
