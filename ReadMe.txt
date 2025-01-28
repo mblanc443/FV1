@@ -16,3 +16,9 @@ VCC  5V
 Encoder ArdNano
 CW      2
 CCW     3
+
+Parameters buttons 1, 2, 3, other button's pins connected to GND
+Button 1  - A0
+Button 2  - A1
+Button 3  - A2
+
