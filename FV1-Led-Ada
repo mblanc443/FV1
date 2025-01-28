@@ -4,6 +4,7 @@
 #include <SPI.h>
 #include <Encoder.h>
 #include <EEPROM.h>
+#include <Bounce2.h>
 
 #define DEBUG 1    // ON/OFF switch
 
@@ -22,18 +23,18 @@
 Adafruit_ST7735 tft = Adafruit_ST7735(tftCS, tftDC, tftRST);
 
 // Encoder Pins
-#define pinEncoderCW   2
-#define pinEncoderCCW  3
-//#define pinButtonParam1 4  
-//#define pinButtonParam2 5
-//#define pinButtonParam2 6 
+#define pinEncoderCW     2
+#define pinEncoderCCW    3
+#define pinButtonParam1 A0  
+#define pinButtonParam2 A1
+#define pinButtonParam3 A2 
 
 // Encoder Setup
 Encoder myEnc(pinEncoderCW, pinEncoderCCW);
 
-//volatile bool buttonPressed            = false;
-//volatile unsigned long buttonPressTime = 0;
-//volatile bool longPressActive          = false;
+Bounce btnParam1 = Bounce(); 
+Bounce btnParam2 = Bounce(); 
+Bounce btnParam3 = Bounce(); 
 
 // Array Definition
 struct Item {
@@ -44,7 +45,7 @@ Item items[24];
 
 int currentItem   = 0; // Last selected effect index
 int currentParam  = 0;
-bool editingMode  = false;
+bool editMode  = false;
 unsigned long lastInteractionTime = 0;
 
 // EEPROM Addresses
@@ -65,7 +66,13 @@ void setup() {
 
   // Configure button and encoder
   //pinMode(BUTTON_PIN, INPUT_PULLUP);  // Button with pull-up
-  //attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonInterrupt, FALLING);
+  pinMode(pinButtonParam1, INPUT_PULLUP); // Enable internal pull-up for A0
+  pinMode(pinButtonParam2, INPUT_PULLUP); // Enable internal pull-up for A1
+  pinMode(pinButtonParam3, INPUT_PULLUP); // Enable internal pull-up for A2
+  //
+  btnParam1.attach(pinButtonParam1);
+  btnParam2.attach(pinButtonParam2);
+  btnParam3.attach(pinButtonParam3);
 
   String names[24] = {
     "CHORUS.0", "REVERB.a0", "REVERB.b0", "Tremo.a0", "Tremo.b0", "FLANGER\n  good.0", "PITCH\n   Octave.0", "DISTORT\n   fuzz.0",
@@ -110,14 +117,25 @@ void loop() {
     lastPosition = newPosition; // Update the last position
     //
     drawItem();
-    lastInteractionTime = millis();
+    //lastInteractionTime = millis();
+  }
+  
+  btnParam1.update();
+  if (btnParam1.fell()) {
+      Serial.println("Button 1 ON");
+  }
+  //
+    btnParam2.update();
+  if (btnParam2.fell()) {
+      Serial.println("Button 2 ON");
+  }
+  //
+    btnParam3.update();
+  if (btnParam3.fell()) {
+      Serial.println("Button 3 ON");
   }
 
-  /*/ Editing Mode Logic
-  if (editingMode) {
-    drawEditMode();
-    lastInteractionTime = millis();
-  } */
+  
 }
 
 void drawFrame() {
@@ -155,7 +173,7 @@ void drawItem() {
   tft.setTextSize(1);
   for (int i = 0; i < 3; i++) {
     uint16_t color = ST77XX_BLUE;
-    if (editingMode && i == currentParam) {
+    if (editMode && i == currentParam) {
       color = tft.color565(0, 0, 255); // Highlighted blue
     }
     int barY = 60 + i * 16;
