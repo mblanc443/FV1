@@ -2,7 +2,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
 #include <SPI.h>
-#include <Encoder.h>
 #include <EEPROM.h>
 #include <Bounce2.h>
 
@@ -23,18 +22,28 @@
 Adafruit_ST7735 tft = Adafruit_ST7735(tftCS, tftDC, tftRST);
 
 // Encoder Pins
-#define pinEncoderCW     2
-#define pinEncoderCCW    3
+#define pindebouncerCW   3
+#define pinEncoderCCW    2
 #define pinButtonParam1 A0  
 #define pinButtonParam2 A1
 #define pinButtonParam3 A2 
 
 // Encoder Setup
-Encoder myEnc(pinEncoderCW, pinEncoderCCW);
+volatile int encoderCount = 0;
+volatile int8_t position  = 0; // Tracks partial steps (0-3)
 
-Bounce btnParam1 = Bounce(); 
-Bounce btnParam2 = Bounce(); 
-Bounce btnParam3 = Bounce(); 
+Bounce btnParam1    = Bounce(); 
+Bounce btnParam2    = Bounce(); 
+Bounce btnParam3    = Bounce(); 
+Bounce debouncerCW  = Bounce();
+Bounce debouncerCCW = Bounce();
+// State Transition Table (determines direction)
+const int8_t stateTable[] = {
+  0, -1, 1, 0,
+  1, 0, 0, -1,
+  -1, 0, 0, 1,
+  0, 1, -1, 0
+};
 
 // Array Definition
 struct Item {
@@ -64,20 +73,25 @@ void setup() {
   tft.setRotation(1); // Horizontal mode
   tft.fillScreen(ST77XX_BLACK);
 
-  // Configure button and encoder
-  //pinMode(BUTTON_PIN, INPUT_PULLUP);  // Button with pull-up
-  pinMode(pinButtonParam1, INPUT_PULLUP); // Enable internal pull-up for A0
-  pinMode(pinButtonParam2, INPUT_PULLUP); // Enable internal pull-up for A1
-  pinMode(pinButtonParam3, INPUT_PULLUP); // Enable internal pull-up for A2
-  //
+  // Configure encoder and buttons 
+  pinMode(pindebouncerCW, INPUT_PULLUP);    // set up clockwise encoder rotation 
+  pinMode(pinEncoderCCW, INPUT_PULLUP);   // set up ounter clockwise encoder rotation
+  pinMode(pinButtonParam1, INPUT_PULLUP); // Enable internal pull-up for button on A0
+  pinMode(pinButtonParam2, INPUT_PULLUP); // Enable internal pull-up for button on A1
+  pinMode(pinButtonParam3, INPUT_PULLUP); // Enable internal pull-up for button on A2
+  // attach bounce objects to pins
+  debouncerCW.attach(pindebouncerCW);
+  debouncerCW.interval(15);                   // Debounce time in ms
+  debouncerCCW.attach(pinEncoderCCW);
+  debouncerCCW.interval(15);                  // Debounce time in ms
   btnParam1.attach(pinButtonParam1);
   btnParam2.attach(pinButtonParam2);
   btnParam3.attach(pinButtonParam3);
 
   String names[24] = {
-    "CHORUS.0", "REVERB.a0", "REVERB.b0", "Tremo.a0", "Tremo.b0", "FLANGER\n  good.0", "PITCH\n   Octave.0", "DISTORT\n   fuzz.0",
-    "CHORUS.1", "REVERB.a1", "REVERB.b1", "Tremo.a1", "Tremo.b1", "FLANGER.1", "Pitch\n   Octave.1", "DISTORT\n    fuzz.1",
-    "CHORUS.2", "REVERB.a2", "REVERB.b2", "Tremo.a2", "Tremo.b2", "FLANGER.2", "Pitch\n   Octave.2", "DISTORT.2"
+    "CHORUS.0", "REVERB.a0", "REVERB.b0", "Tremo.a0", "Tremo.b0", "FLANGER.0", "PITCH.0", "DISTORT.0",
+    "CHORUS.1", "REVERB.a1", "REVERB.b1", "Tremo.a1", "Tremo.b1", "FLANGER.1", "Pitch.1", "DISTORT.1",
+    "CHORUS.2", "REVERB.a2", "REVERB.b2", "Tremo.a2", "Tremo.b2", "FLANGER.2", "Pitch.2", "DISTORT.2"
   };
 
   for (int i = 0; i < 24; i++) {
@@ -109,33 +123,50 @@ void setup() {
 // LOOP
 void loop() { 
   static long lastPosition = -999;
-  long newPosition = myEnc.read() / 2; // Adjust for sensitivity
- 
-  // Handle encoder rotation for item selection
+  //  
+  debouncerCW.update();
+  debouncerCCW.update();
+  //
+  int cwState = debouncerCW.read();
+  int ccwState = debouncerCCW.read();
+  //
+  int newPosition = (cwState << 1) | ccwState;  // Combine into 2-bit value
+  // Check for state change
   if (newPosition != lastPosition) {
-    currentItem = (currentItem + (newPosition > lastPosition ? 1 : -1) + 24) % 24;
-    lastPosition = newPosition; // Update the last position
-    //
-    drawItem();
-    //lastInteractionTime = millis();
+      // Calculate direction using state table
+      int8_t direction = stateTable[(lastPosition << 2) | newPosition];
+      position += direction;
+      // Detect full detent (4 steps = 1 click)
+      if (position >= 2) {  // 4 or 2 STEPS_PER_DETENT
+          encoderCount++; position = 0;
+          currentItem = (currentItem + 1 + 24) % 24;
+          debugln("CW! currentItem: " + String(currentItem));
+          drawItem();
+      } else if (position <= -2) {
+          encoderCount--; position = 0;
+          //currentItem = (currentItem + (newPosition > lastPosition ? 1 : -1) + 24) % 24;
+          currentItem = (currentItem - 1 + 24) % 24;
+          debugln("CCW! currentItem: " + String(currentItem));
+          drawItem();
+      }
+      //    
+      lastPosition = newPosition;
   }
-  
+  //
   btnParam1.update();
   if (btnParam1.fell()) {
-      Serial.println("Button 1 ON");
+      debugln("Button 1 ON");
   }
   //
-    btnParam2.update();
+  btnParam2.update();
   if (btnParam2.fell()) {
-      Serial.println("Button 2 ON");
+      debugln("Button 2 ON");
   }
   //
-    btnParam3.update();
+  btnParam3.update();
   if (btnParam3.fell()) {
-      Serial.println("Button 3 ON");
+      debugln("Button 3 ON");
   }
-
-  
 }
 
 void drawFrame() {
@@ -191,15 +222,15 @@ void drawItem() {
 }
 
 void drawEditMode() {
-  static long lastPosition = -999;
-  long newPosition = myEnc.read() / 4;
+  //static long lastPosition = -999;
+  //long newPosition = myEnc.read() / 4;
 
-  if (newPosition != lastPosition) {
-    lastPosition = newPosition;
-    items[currentItem].params[currentParam] = constrain(items[currentItem].params[currentParam] + (newPosition > lastPosition ? 1 : -1), 0, 100);
-  }
+  //if (newPosition != lastPosition) {
+  //  lastPosition = newPosition;
+  //  items[currentItem].params[currentParam] = constrain(items[currentItem].params[currentParam] + (newPosition > lastPosition ? 1 : -1), 0, 100);
+ // }
 
-  drawItem(); // Refresh the screen with updated values
+  //drawItem(); // Refresh the screen with updated values
 }
 
 /*/
