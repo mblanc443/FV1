@@ -73,16 +73,16 @@ void setup() {
   tft.fillScreen(ST77XX_BLACK);
 
   // Configure encoder and buttons 
-  pinMode(pindebouncerCW, INPUT_PULLUP);    // set up clockwise encoder rotation 
+  pinMode(pindebouncerCW, INPUT_PULLUP);  // set up clockwise encoder rotation 
   pinMode(pinEncoderCCW, INPUT_PULLUP);   // set up ounter clockwise encoder rotation
   pinMode(pinButtonParam1, INPUT_PULLUP); // Enable internal pull-up for button on A0
   pinMode(pinButtonParam2, INPUT_PULLUP); // Enable internal pull-up for button on A1
   pinMode(pinButtonParam3, INPUT_PULLUP); // Enable internal pull-up for button on A2
   // attach bounce objects to pins
   debouncerCW.attach(pindebouncerCW);
-  debouncerCW.interval(15);                   // Debounce time in ms
+  debouncerCW.interval(15);                // Debounce time in ms
   debouncerCCW.attach(pinEncoderCCW);
-  debouncerCCW.interval(15);                  // Debounce time in ms
+  debouncerCCW.interval(15);               // Debounce time in ms
   btnParam1.attach(pinButtonParam1);
   btnParam2.attach(pinButtonParam2);
   btnParam3.attach(pinButtonParam3);
@@ -116,7 +116,6 @@ void setup() {
   }
   // Draw the initial screen
   drawFrame();     
-  //drawItem();
 }
 
 // LOOP
@@ -155,16 +154,22 @@ void loop() {
   btnParam1.update();
   if (btnParam1.fell()) {
       debugln("Button 1 ON");
+      items[currentItem].params[0] = (items[currentItem].params[0] + 10 + 100) % 100;
+      redrawParam(0, 60, tft.color565(0, 0, 255));
   }
   //
   btnParam2.update();
   if (btnParam2.fell()) {
       debugln("Button 2 ON");
+      items[currentItem].params[1] = (items[currentItem].params[1] + 10 + 100) % 100;
+      redrawParam(1, 76, tft.color565(0, 0, 255));
   }
   //
   btnParam3.update();
   if (btnParam3.fell()) {
       debugln("Button 3 ON");
+      items[currentItem].params[2] = (items[currentItem].params[2] + 10 + 100) % 100;
+      redrawParam(2, 92, tft.color565(0, 0, 255));      
   }
 }
 
@@ -208,29 +213,21 @@ void drawItem() {
     }
     int barY = 60 + i * 16;
     
-    // PARAM
-    tft.setTextColor(ST77XX_WHITE);
-    tft.fillRect(21, barY+1, 98, 6, tft.color565(0, 0, 0)); // erase prev. data
-    tft.fillRect(21, barY+1, items[currentItem].params[i]-2, 4, color); // Horizontal blue bar
-    // erase prev. percent number
-    tft.fillRect(126, barY, 20, 10, tft.color565(0, 0, 0)); 
-    tft.setCursor(128, barY); // Right of bar
-    tft.print(items[currentItem].params[i]); // number of percents of the right
-    tft.print("%");
+    redrawParam(i, barY, color);
   }
 }
 
-void drawEditMode() {
-  //static long lastPosition = -999;
-  //long newPosition = myEnc.read() / 4;
-
-  //if (newPosition != lastPosition) {
-  //  lastPosition = newPosition;
-  //  items[currentItem].params[currentParam] = constrain(items[currentItem].params[currentParam] + (newPosition > lastPosition ? 1 : -1), 0, 100);
- // }
-
-  //drawItem(); // Refresh the screen with updated values
+void redrawParam(int param, int y, int16_t color) {
+    tft.setTextColor(ST77XX_WHITE);
+    tft.fillRect(21, y+1, 98, 6, tft.color565(0, 0, 0)); // erase prev. data
+    tft.fillRect(21, y+1, items[currentItem].params[param]-2, 4, color); // Horizontal blue bar
+    // erase prev. percent number
+    tft.fillRect(126, y, 20, 10, tft.color565(0, 0, 0)); 
+    tft.setCursor(128, y);                               // Right of bar
+    tft.print(items[currentItem].params[param]);         // number of percents of the right
+    tft.print("%");
 }
+
 
 /*/
 void buttonInterrupt() {
