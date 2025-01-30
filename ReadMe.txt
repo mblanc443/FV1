@@ -22,3 +22,8 @@ Button 1  - A0
 Button 2  - A1
 Button 3  - A2
 
+PWM:
+POT1 - D5
+POT2 - D6
+POT3 - D12
+
