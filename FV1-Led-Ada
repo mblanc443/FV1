@@ -184,7 +184,7 @@ void loop() {
       redrawParam(1, 76, tft.color565(255, 0, 0));
       saveParam(currentItem, 1);
       // PWM & map to output 3.3v
-      applyPWM(items[currentItem].params[0], pinPOT2);
+      applyPWM(items[currentItem].params[1], pinPOT2);
       debugln("Pot2: " + String(calculateVoltage(items[currentItem].params[1])));
   }
   //
