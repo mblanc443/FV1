@@ -15,9 +15,9 @@
 #endif
 
 // OLED Display Setup
-#define tftCS   10
-#define tftRST   9
-#define tftDC    8
+#define tftCS           10
+#define tftRST           9
+#define tftDC            8
 Adafruit_ST7735 tft = Adafruit_ST7735(tftCS, tftDC, tftRST);
 
 // Encoder Pins
@@ -26,6 +26,13 @@ Adafruit_ST7735 tft = Adafruit_ST7735(tftCS, tftDC, tftRST);
 #define pinButtonParam1 A0  
 #define pinButtonParam2 A1
 #define pinButtonParam3 A2 
+// FV1 control outputs
+#define pinPOT1          5 // Pot1 PWM. Only D3,D5,D6,D9,D10,D11 can generate PWM signals using analogWrite()
+#define pinPOT2          6 // Pot2 PWM
+#define pinPOT3         11 // Pot3 PWM
+#define pinRomS1         4 // S1
+#define pinRomS2         7 // S2
+#define pinRomS3        12 // S3
 
 // Encoder Setup
 volatile int encoderCount = 0;
@@ -61,7 +68,8 @@ unsigned long lastInteractionTime = 0;
 #define EEPROM_LAST_EFFECT_ADDR  1
 #define EEPROM_PARAMS_START_ADDR 2
 #define EEPROM_SIGNATURE      0xA5
-
+// PWM
+const int pwmMaxValue = 100;
 //
 void setup() {
   // Serial for debugging
@@ -80,13 +88,20 @@ void setup() {
   pinMode(pinButtonParam3, INPUT_PULLUP); // Enable internal pull-up for button on A2
   // attach bounce objects to pins
   debouncerCW.attach(pindebouncerCW);
-  debouncerCW.interval(15);                // Debounce time in ms
+  debouncerCW.interval(15);               // Debounce time in ms
   debouncerCCW.attach(pinEncoderCCW);
-  debouncerCCW.interval(15);               // Debounce time in ms
+  debouncerCCW.interval(15);              // Debounce time in ms
   btnParam1.attach(pinButtonParam1);
   btnParam2.attach(pinButtonParam2);
   btnParam3.attach(pinButtonParam3);
-
+  //
+  pinMode(pinPOT1, OUTPUT);  //POT1 PWM
+  pinMode(pinPOT2, OUTPUT);  //POT2 PWM
+  pinMode(pinPOT3, OUTPUT);  //POT3 PWM
+  pinMode(pinRomS1,OUTPUT);  //S2
+  pinMode(pinRomS2,OUTPUT);  //S1
+  pinMode(pinRomS3,OUTPUT);  //S0
+  //
   String names[24] = {
     "CHORUS.0", "REVERB.a0", "REVERB.b0", "Tremo.a0", "Tremo.b0", "FLANGER.0", "PITCH.0", "DISTORT.0",
     "CHORUS.1", "REVERB.a1", "REVERB.b1", "Tremo.a1", "Tremo.b1", "FLANGER.1", "Pitch.1", "DISTORT.1",
@@ -156,7 +171,10 @@ void loop() {
       debugln("Button 1 ON");
       items[currentItem].params[0] = (items[currentItem].params[0] + 10 + 100) % 100;
       redrawParam(0, 60, tft.color565(0, 0, 255));
-       saveParam(currentItem, 0); 
+      saveParam(currentItem, 0);
+      // PWM & map to output 3.3v
+      applyPWM(items[currentItem].params[0], pinPOT1);
+      debugln("Pot1: "); Serial.print(calculateVoltage(items[currentItem].params[0]));
   }
   //
   btnParam2.update();
@@ -165,6 +183,9 @@ void loop() {
       items[currentItem].params[1] = (items[currentItem].params[1] + 10 + 100) % 100;
       redrawParam(1, 76, tft.color565(0, 0, 255));
       saveParam(currentItem, 1);
+      // PWM & map to output 3.3v
+      applyPWM(items[currentItem].params[0], pinPOT2);
+      debugln("Pot2: "); Serial.print(calculateVoltage(items[currentItem].params[1]));
   }
   //
   btnParam3.update();
@@ -172,10 +193,25 @@ void loop() {
       debugln("Button 3 ON");
       items[currentItem].params[2] = (items[currentItem].params[2] + 10 + 100) % 100;
       redrawParam(2, 92, tft.color565(0, 0, 255)); 
-      saveParam(currentItem, 2);    
+      saveParam(currentItem, 2);
+      // PWM & map to output 3.3v
+      applyPWM(items[currentItem].params[2], pinPOT3);
+      debugln("Pot3: "); Serial.print(calculateVoltage(items[currentItem].params[2]));   
   }
 }
 
+// Function to convert 0-100 to PWM (0-255) and apply to pin
+void applyPWM(int value, int pin) {
+    int pwm = map(value, 0, pwmMaxValue, 0, 255);
+    analogWrite(pin, pwm);
+}
+
+// Function to calculate voltage (0-3.3V) - using for debugging
+float calculateVoltage(int value) {
+    return map(value, 0, pwmMaxValue, 0, 330) / 100.0;  // 3.3V scaling
+}
+
+// draws non-updateable parts like frame and details 
 void drawFrame() {
   // draw details
   tft.setTextSize(1);
@@ -196,7 +232,7 @@ void drawFrame() {
 //
 void drawItem() {
   // Centered Title (Effect Number and Name)
-  tft.setTextColor(ST77XX_BLUE);
+  tft.setTextColor(ST77XX_RED);
   tft.setTextSize(2);
 
   String effectText = String(currentItem + 1) + "." + items[currentItem].name;
@@ -210,7 +246,7 @@ void drawItem() {
   // Parameters Display with Horizontal Bars
   tft.setTextSize(1);
   for (int i = 0; i < 3; i++) {
-    uint16_t color = ST77XX_BLUE;
+    uint16_t color = ST77XX_RED;
     if (editMode && i == currentParam) {
       color = tft.color565(0, 0, 255); // Highlighted blue
     }
