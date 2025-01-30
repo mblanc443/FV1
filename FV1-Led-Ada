@@ -21,15 +21,15 @@
 Adafruit_ST7735 tft = Adafruit_ST7735(tftCS, tftDC, tftRST);
 
 // Encoder Pins
-#define pindebouncerCW   3
-#define pinEncoderCCW    2
+#define pindebouncerCW   2
+#define pinEncoderCCW    4
 #define pinButtonParam1 A0  
 #define pinButtonParam2 A1
 #define pinButtonParam3 A2 
 // FV1 control outputs
-#define pinPOT1          5 // Pot1 PWM. Only D3,D5,D6,D9,D10,D11 can generate PWM signals using analogWrite()
-#define pinPOT2          6 // Pot2 PWM
-#define pinPOT3         12 // Pot3 PWM
+#define pinPOT1          3 // Pot1 PWM. Only D3,D5,D6,D9,D10,D11 can generate PWM signals using analogWrite()
+#define pinPOT2          5 // Pot2 PWM
+#define pinPOT3          6 // Pot3 PWM
 #define pinRomS1         4 // S1
 #define pinRomS2         7 // S2
 #define pinRomS3        13 // S3
