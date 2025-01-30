@@ -170,33 +170,33 @@ void loop() {
   if (btnParam1.fell()) {
       debugln("Button 1 ON");
       items[currentItem].params[0] = (items[currentItem].params[0] + 10 + 100) % 100;
-      redrawParam(0, 60, tft.color565(0, 0, 255));
+      redrawParam(0, 60, tft.color565(255, 0, 0));
       saveParam(currentItem, 0);
       // PWM & map to output 3.3v
       applyPWM(items[currentItem].params[0], pinPOT1);
-      debugln("Pot1: "); Serial.print(calculateVoltage(items[currentItem].params[0]));
+      debugln("Pot1: " + String(calculateVoltage(items[currentItem].params[0])));
   }
   //
   btnParam2.update();
   if (btnParam2.fell()) {
       debugln("Button 2 ON");
       items[currentItem].params[1] = (items[currentItem].params[1] + 10 + 100) % 100;
-      redrawParam(1, 76, tft.color565(0, 0, 255));
+      redrawParam(1, 76, tft.color565(255, 0, 0));
       saveParam(currentItem, 1);
       // PWM & map to output 3.3v
       applyPWM(items[currentItem].params[0], pinPOT2);
-      debugln("Pot2: "); Serial.print(calculateVoltage(items[currentItem].params[1]));
+      debugln("Pot2: " + String(calculateVoltage(items[currentItem].params[1])));
   }
   //
   btnParam3.update();
   if (btnParam3.fell()) {
       debugln("Button 3 ON");
       items[currentItem].params[2] = (items[currentItem].params[2] + 10 + 100) % 100;
-      redrawParam(2, 92, tft.color565(0, 0, 255)); 
+      redrawParam(2, 92, tft.color565(255, 0, 0)); 
       saveParam(currentItem, 2);
       // PWM & map to output 3.3v
       applyPWM(items[currentItem].params[2], pinPOT3);
-      debugln("Pot3: "); Serial.print(calculateVoltage(items[currentItem].params[2]));   
+      debugln("Pot3: " + String(calculateVoltage(items[currentItem].params[2])));   
   }
 }
 
@@ -232,7 +232,7 @@ void drawFrame() {
 //
 void drawItem() {
   // Centered Title (Effect Number and Name)
-  tft.setTextColor(ST77XX_RED);
+  tft.setTextColor(tft.color565(255, 0, 255)); //ST77XX_RED);
   tft.setTextSize(2);
 
   String effectText = String(currentItem + 1) + "." + items[currentItem].name;
@@ -246,10 +246,10 @@ void drawItem() {
   // Parameters Display with Horizontal Bars
   tft.setTextSize(1);
   for (int i = 0; i < 3; i++) {
-    uint16_t color = ST77XX_RED;
-    if (editMode && i == currentParam) {
-      color = tft.color565(0, 0, 255); // Highlighted blue
-    }
+    uint16_t color = ST77XX_GREEN;
+   // if (editMode && i == currentParam) {
+   //   color = tft.color565(255, 0, 0); // Highlighted blue
+   // }
     int barY = 60 + i * 16;
     
     redrawParam(i, barY, color);
