@@ -30,14 +30,17 @@ Adafruit_ST7735 tft = Adafruit_ST7735(tftCS, tftDC, tftRST);
 #define pinPOT1          3 // Pot1 PWM. Only D3,D5,D6,D9,D10,D11 can generate PWM signals using analogWrite()
 #define pinPOT2          5 // Pot2 PWM
 #define pinPOT3          6 // Pot3 PWM
-#define pinRomS1        A3 // S1
-#define pinRomS2        A4 // S2
-#define pinRomS3        A5 // S3
-#define pinRomExt1      A6 // ext ROM1
-#define pinRomExt2      A7 // ext ROM2
+#define pinS0           A3
+#define pinS1           A4
+#define pinS2           A5
+#define pinRom1         A6
+#define pinRom2         A7
+#define pinRomEnable     7
+//
+const int outputPins[] = {pinS0,pinS1,pinS2,pinRom1,pinRom2};
 
 // Encoder Setup
-volatile int encoderCount = 0;
+//volatile int encoderCount = 0;
 volatile int8_t position  = 0; // Tracks partial steps (0-3)
 
 Bounce btnParam1    = Bounce(); 
@@ -100,9 +103,6 @@ void setup() {
   pinMode(pinPOT1, OUTPUT);  //POT1 PWM
   pinMode(pinPOT2, OUTPUT);  //POT2 PWM
   pinMode(pinPOT3, OUTPUT);  //POT3 PWM
-  pinMode(pinRomS1,OUTPUT);  //S2
-  pinMode(pinRomS2,OUTPUT);  //S1
-  pinMode(pinRomS3,OUTPUT);  //S0
   //
   String names[24] = {
     "CHORUS.0", "REVERB.a0", "REVERB.b0", "Tremo.a0", "Tremo.b0", "FLANGER.0", "PITCH.0", "DISTORT.0",
@@ -113,6 +113,14 @@ void setup() {
   for (int i = 0; i < 24; i++) {
     items[i].name = names[i];
   }
+  // set and initialize output pins
+  for (int i = 0; i < 5; i++) {
+     pinMode(outputPins[i], OUTPUT);
+     digitalWrite(outputPins[i], LOW);
+  }
+  // set RomEnable pin
+  pinMode(pinRomEnable, OUTPUT);
+  digitalWrite(pinRomEnable, HIGH);
 
   // Check EEPROM Signature
   if (EEPROM.read(EEPROM_SIGNATURE_ADDR) != EEPROM_SIGNATURE) {
@@ -153,12 +161,14 @@ void loop() {
       position += direction;
       // Detect full detent (4 steps = 1 click)
       if (position >= 2) {  // 4 or 2 STEPS_PER_DETENT
-          encoderCount++; position = 0;
+          //encoderCount++;
+          position = 0;
           currentItem = (currentItem + 1 + 24) % 24;
           debugln("CW! currentItem: " + String(currentItem));
           drawItem();
       } else if (position <= -2) {
-          encoderCount--; position = 0;
+          //encoderCount--; 
+          position = 0;
           //currentItem = (currentItem + (newPosition > lastPosition ? 1 : -1) + 24) % 24;
           currentItem = (currentItem - 1 + 24) % 24;
           debugln("CCW! currentItem: " + String(currentItem));
@@ -166,7 +176,10 @@ void loop() {
       }
       //    
       lastPosition = newPosition;
+      // update all outputs
+      updateOutputs();
   }
+
   //
   btnParam1.update();
   if (btnParam1.fell()) {
@@ -298,4 +311,50 @@ void saveLastSelectedEffect() {
 
 int loadLastSelectedEffect() {
   return EEPROM.read(EEPROM_LAST_EFFECT_ADDR);
+}
+
+// Updates the digital outputs based on encoder clicks.
+// A4-A6 represent a binary value for every 8 clicks.
+// A7 turns HIGH after the first 8 clicks.
+// A8 turns HIGH after 16 clicks and resets A7.
+// After position 24, all outputs reset to LOW.
+void updateOutputs() {
+    if (currentItem == 24) {
+        // Reset all outputs to LOW when reaching position 24
+        for (int i = 0; i < 5; i++) {
+            digitalWrite(outputPins[i], LOW);
+        }
+        return; // Exit function early to avoid setting outputs
+    }
+    
+    int stepGroup = currentItem / 8;  // Determine the current group of 8 clicks.
+    int stepPosition = currentItem % 8;  // Get position within the current group of 8 clicks.
+    
+    // Set A4-A6 to binary representation of stepPosition (0-7 in binary)
+    for (int i = 0; i < 3; i++) {
+        digitalWrite(outputPins[i], (stepGroup & (1 << i)) ? HIGH : LOW);
+        //digitalWrite(outputPins[i], (stepPosition >> i) & 1);  // Binary output
+    }
+
+    // Control A7 and A8 based on groups of 8 clicks
+    digitalWrite(outputPins[3], (stepGroup >= 1) ? HIGH : LOW);  // Set A7 HIGH after 8 clicks.
+    digitalWrite(outputPins[4], (stepGroup >= 2) ? HIGH : LOW);  // Set A8 HIGH after 16 clicks, while A7 resets.
+    // ROM set pulse
+    digitalWrite(pinRomEnable, LOW); delay(5); digitalWrite(pinRomEnable, HIGH);
+    // debugging info
+    delayMicroseconds(1);  // Allow pin states to sett
+    /*String outputLogic, output;
+    for (int i=0; i < 5; i++) {
+      outputLogic += (stepGroup & (1 << i)) ? '1' : '0';  // Read from stepGroup logic instead of digitalRead
+    //  output += digitalRead(outputPins[i]);
+    }
+
+    for (int i = 0; i < 3; i++) {
+        output += ((stepPosition >> i) & 1) ? '1' : '0';  // Read stepPosition logic
+    }
+    output += (stepGroup >= 1) ? '1' : '0';  // A7
+    output += (stepGroup >= 2) ? '1' : '0';  // A8
+
+    debugln("OutputLogc: " + String(outputLogic) + " EncCount: " + String(currentItem) + " Out Binary: " + String(output));
+    */
 }
