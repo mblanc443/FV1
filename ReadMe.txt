@@ -27,3 +27,9 @@ POT1 - D5
 POT2 - D6
 POT3 - D12
 
+Outputs:
+S0   - A4
+S1   - A5
+S2   - A6
+Rom1 - A7
+Rom2 - A8
