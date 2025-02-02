@@ -324,13 +324,13 @@ int loadLastSelectedEffect() {
 // After position 24, all outputs reset to LOW.
 void updateOutputs(int prevItem, int currItem) {
     debugln("prevItem: " + String(prevItem) + " currItem: " + String(currItem));
-    if (currItem == 24) {
+    /*if (currItem == 24) {
         //Reset all outputs to LOW when reaching position 24
         for (int i = 0; i < 5; i++) {
             digitalWrite(outputPins[i], HIGH);
         }
         return; // Exit function early to avoid setting outputs
-    }
+    } */
     int stepGroup = currItem / 8;     // Determine the current group of 8 clicks.
     int stepPosition = currItem % 8;  // Get position within the current group of 8 clicks.
     //debugln("stepGroup: " + String(stepGroup) + " stepPosition: " + String(stepPosition));
