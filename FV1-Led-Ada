@@ -189,7 +189,7 @@ void loop() {
   btnParam1.update();
   if (btnParam1.fell()) {
       debugln("Button 1 ON");
-      items[currentItem].params[0] = (items[currentItem].params[0] + 10 + 99) % 100;
+      items[currentItem].params[0] = (items[currentItem].params[0] + 11 + 100) % 100;
       redrawParam(0, 60, tft.color565(255, 0, 0));
       saveParam(currentItem, 0);
       // PWM & map to output 3.3v
@@ -200,7 +200,7 @@ void loop() {
   btnParam2.update();
   if (btnParam2.fell()) {
       debugln("Button 2 ON");
-      items[currentItem].params[1] = (items[currentItem].params[1] + 10 + 100) % 100;
+      items[currentItem].params[1] = (items[currentItem].params[1] + 11 + 100) % 100;
       redrawParam(1, 76, tft.color565(255, 0, 0));
       saveParam(currentItem, 1);
       // PWM & map to output 3.3v
@@ -211,7 +211,7 @@ void loop() {
   btnParam3.update();
   if (btnParam3.fell()) {
       debugln("Button 3 ON");
-      items[currentItem].params[2] = (items[currentItem].params[2] + 10 + 100) % 100;
+      items[currentItem].params[2] = (items[currentItem].params[2] + 11 + 100) % 100;
       redrawParam(2, 92, tft.color565(255, 0, 0)); 
       saveParam(currentItem, 2);
       // PWM & map to output 3.3v
