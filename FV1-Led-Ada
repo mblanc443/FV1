@@ -336,14 +336,13 @@ void updateOutputs(int prevItem, int currItem) {
     if (currItem >= 8 && currItem < 16) {      // ROM1
         digitalWrite(pinRom2, HIGH);           // Set A8 HIGH after 16 clicks, while A7 resets.
         digitalWrite(pinRom1, LOW );           // Set A7 HIGH after 8 clicks.
-    } else { // ROM1 <-> ROM2
-        if (currItem >= 16 && currItem < 24) { // ROM2
-          digitalWrite(pinRomEnable, HIGH);
-          digitalWrite(pinRom1, HIGH);         // Set A7 HIGH in the range 0-7, 8-15
-          digitalWrite(pinRom2, LOW ); 
-        }                                               
-    } else { if (currItem >=0 && currItem <8) {
-        digitalWrite(pinRomEnable, LOW);
+        // ROM1 <-> ROM2
+    } else if (currItem >= 16 && currItem < 24) { // ROM2
+            digitalWrite(pinRomEnable, HIGH);
+            digitalWrite(pinRom1, HIGH);         // Set A7 HIGH in the range 0-7, 8-15
+            digitalWrite(pinRom2, LOW );                                                
+    } else if (currItem >=0 && currItem <8) {
+            digitalWrite(pinRomEnable, LOW);
     }
     if ( prevItem < currItem ) { // UP
       // send pulse to FV1 to switch to ext Rom
@@ -351,18 +350,22 @@ void updateOutputs(int prevItem, int currItem) {
           digitalWrite(pinRomEnable, LOW);
           delay(15); 
           digitalWrite(pinRomEnable, HIGH);
-      } else { if (currItem >= 0 && currItem < 8) {
-          digitalWrite(pinRom1, HIGH);
-          digitalWrite(pinRom2, HIGH); }
+      } else { 
+          if (currItem >= 0 && currItem < 8) {
+            digitalWrite(pinRom1, HIGH);
+            digitalWrite(pinRom2, HIGH); 
+          }
       }
     } else { // DOWN
       if (currItem == 15 || currItem == 23) {
-          digitalWrite(pinRomEnable, LOW);
-          delay(15); 
-          digitalWrite(pinRomEnable, HIGH);
-      } else { if (currItem >= 0 && currItem < 8) {
-          digitalWrite(pinRom1, HIGH);
-          digitalWrite(pinRom2, HIGH); }
+            digitalWrite(pinRomEnable, LOW);
+            delay(15); 
+            digitalWrite(pinRomEnable, HIGH);
+        } else { 
+          if (currItem >= 0 && currItem < 8) {
+            digitalWrite(pinRom1, HIGH);
+            digitalWrite(pinRom2, HIGH); 
+          }
       }
     } 
     // 
