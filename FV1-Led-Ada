@@ -364,7 +364,7 @@ void updateOutputs(int prevItem, int currItem) {
       } else { if (currItem >= 0 && currItem < 8) {
           digitalWrite(pinRomEnable, LOW);
           digitalWrite(pinRom1, HIGH);
-          digitalWrite(pinRom2, HIGH);
+          digitalWrite(pinRom2, HIGH); }
       }
     } else { // DOWN
       if (currItem == 15 || currItem == 23) {
@@ -375,7 +375,7 @@ void updateOutputs(int prevItem, int currItem) {
       } else { if (currItem >= 0 && currItem < 8) {
           digitalWrite(pinRomEnable, LOW);
           digitalWrite(pinRom1, HIGH);
-          digitalWrite(pinRom2, HIGH);
+          digitalWrite(pinRom2, HIGH); }
       }
     } 
     // 
