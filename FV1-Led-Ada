@@ -130,7 +130,7 @@ void setup() {
     // Initialize EEPROM with default values if signature is missing
     for (int i = 0; i < 24; i++) {
       for (int j = 0; j < 3; j++) {
-        items[i].params[j] = 100; // Default parameters
+        items[i].params[j] = 0; // Default parameters
       }
     }
     currentItem = 0;            // Default to first effect
@@ -188,7 +188,7 @@ void loop() {
   btnParam1.update();
   if (btnParam1.fell()) {
       debugln("Button 1 ON");
-      items[currentItem].params[0] = (items[currentItem].params[0] + 10 + 100) % 100;
+      items[currentItem].params[0] = (items[currentItem].params[0] + 10 + 99) % 100;
       redrawParam(0, 60, tft.color565(255, 0, 0));
       saveParam(currentItem, 0);
       // PWM & map to output 3.3v
@@ -327,7 +327,7 @@ void updateOutputs(int prevItem, int currItem) {
     int stepPosition = currItem % 8;  // Get position within the current group of 8 clicks.
 
     // Set A4-A6 (0-7 in binary)
-    for (int i = 2; i < 5; i++) {
+    for (int i = 0; i < 3; i++) {
         //digitalWrite(outputPins[i], (stepGroup & (1 << i)) ? HIGH : LOW);
         digitalWrite(outputPins[i], (stepPosition >> i) & 1);  // Binary output
     }
