@@ -323,17 +323,8 @@ int loadLastSelectedEffect() {
 // A8 turns HIGH after 16 clicks and resets A7.
 // After position 24, all outputs reset to LOW.
 void updateOutputs(int prevItem, int currItem) {
-    debugln("prevItem: " + String(prevItem) + " currItem: " + String(currItem));
-    /*if (currItem == 24) {
-        //Reset all outputs to LOW when reaching position 24
-        for (int i = 0; i < 5; i++) {
-            digitalWrite(outputPins[i], HIGH);
-        }
-        return; // Exit function early to avoid setting outputs
-    } */
     int stepGroup = currItem / 8;     // Determine the current group of 8 clicks.
     int stepPosition = currItem % 8;  // Get position within the current group of 8 clicks.
-    //debugln("stepGroup: " + String(stepGroup) + " stepPosition: " + String(stepPosition));
 
     // Set A4-A6 (0-7 in binary)
     for (int i = 2; i < 5; i++) {
@@ -343,50 +334,37 @@ void updateOutputs(int prevItem, int currItem) {
 
     // FV <-> ROM1
     if (currItem >= 8 && currItem < 16) {      // ROM1
-        debugln("Inside ROM1 block");
         digitalWrite(pinRom2, HIGH);           // Set A8 HIGH after 16 clicks, while A7 resets.
         digitalWrite(pinRom1, LOW );           // Set A7 HIGH after 8 clicks.
     } else { // ROM1 <-> ROM2
         if (currItem >= 16 && currItem < 24) { // ROM2
-          debugln("Inside ROM2 block");
+          digitalWrite(pinRomEnable, HIGH);
           digitalWrite(pinRom1, HIGH);         // Set A7 HIGH in the range 0-7, 8-15
           digitalWrite(pinRom2, LOW ); 
         }                                               
-    } 
-    
+    } else { if (currItem >=0 && currItem <8) {
+        digitalWrite(pinRomEnable, LOW);
+    }
     if ( prevItem < currItem ) { // UP
       // send pulse to FV1 to switch to ext Rom
       if (currItem == 8 || currItem == 16) {   // Set A8 LOW after 16 clicks, while A7 resets.
-          debugln("Inside UP PULSE 8/16");
           digitalWrite(pinRomEnable, LOW);
           delay(15); 
           digitalWrite(pinRomEnable, HIGH);
       } else { if (currItem >= 0 && currItem < 8) {
-          digitalWrite(pinRomEnable, LOW);
           digitalWrite(pinRom1, HIGH);
           digitalWrite(pinRom2, HIGH); }
       }
     } else { // DOWN
       if (currItem == 15 || currItem == 23) {
-          debugln("Inside DOWN PULSE 15/23");
           digitalWrite(pinRomEnable, LOW);
           delay(15); 
           digitalWrite(pinRomEnable, HIGH);
       } else { if (currItem >= 0 && currItem < 8) {
-          digitalWrite(pinRomEnable, LOW);
           digitalWrite(pinRom1, HIGH);
           digitalWrite(pinRom2, HIGH); }
       }
     } 
     // 
     delayMicroseconds(5);  // Allow pin states to sett
-/*
-    // debugging info
-    String output;
-       for (int i = 0; i < 6; i++) {
-           output += String(digitalRead(outputPins[i]));
-    }
-    delay(14);
-    debugln(" EncCount: " + String(currItem) + " Out Binary: " + String(output));
-*/    
 }
