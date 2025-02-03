@@ -188,35 +188,46 @@ void loop() {
   //
   btnParam1.update();
   if (btnParam1.fell()) {
-      debugln("Button 1 ON");
-      items[currentItem].params[0] = (items[currentItem].params[0] + 11 + 100) % 100;
+      // update value to next click w/ + 10%  
+      items[currentItem].params[0] = (items[currentItem].params[0] + 10) % 110;
+      // reset to zero when clicked after it reached max 100%
+      if (items[currentItem].params[0] > 100) { items[currentItem].params[0] = 0; }
+      // update user interface
       redrawParam(0, 60, tft.color565(255, 0, 0));
+      // update eeprom
       saveParam(currentItem, 0);
       // PWM & map to output 3.3v
       applyPWM(items[currentItem].params[0], pinPOT1);
-      //debugln("Pot1: " + String(calculateVoltage(items[currentItem].params[0])));
   }
+
   //
   btnParam2.update();
   if (btnParam2.fell()) {
-      debugln("Button 2 ON");
-      items[currentItem].params[1] = (items[currentItem].params[1] + 11 + 100) % 100;
+      // update value to next click w/ + 10%  
+      tems[currentItem].params[1] = (items[currentItem].params[1] + 10) % 110;
+      // reset to zero when clicked after it reached max 100%
+      if (items[currentItem].params[1] > 100) { items[currentItem].params[1] = 0; }
+      // update user interface
       redrawParam(1, 76, tft.color565(255, 0, 0));
+      // update eeprom
       saveParam(currentItem, 1);
       // PWM & map to output 3.3v
       applyPWM(items[currentItem].params[1], pinPOT2);
-      debugln("Pot2: " + String(calculateVoltage(items[currentItem].params[1])));
   }
+
   //
   btnParam3.update();
   if (btnParam3.fell()) {
-      debugln("Button 3 ON");
-      items[currentItem].params[2] = (items[currentItem].params[2] + 11 + 100) % 100;
-      redrawParam(2, 92, tft.color565(255, 0, 0)); 
+      // update value to next click w/ + 10%  
+      tems[currentItem].params[2] = (items[currentItem].params[2] + 10) % 110;
+      // reset to zero when clicked after it reached max 100%
+      if (items[currentItem].params[2] > 100) { items[currentItem].params[2] = 0; }
+      // update user interface
+      redrawParam(2, 92, tft.color565(255, 0, 0));
+      // update eeprom
       saveParam(currentItem, 2);
       // PWM & map to output 3.3v
-      applyPWM(items[currentItem].params[2], pinPOT3);
-      debugln("Pot3: " + String(calculateVoltage(items[currentItem].params[2])));   
+      applyPWM(items[currentItem].params[2], pinPOT3);  
   }
 }
 
