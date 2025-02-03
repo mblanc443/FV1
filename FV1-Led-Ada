@@ -58,7 +58,6 @@ Item items[24];
 
 int currentItem   = 0; // Last selected effect index
 int currentParam  = 0;
-bool editMode  = false;
 unsigned long lastInteractionTime = 0;
 
 // EEPROM Addresses
