@@ -67,6 +67,8 @@ unsigned long lastInteractionTime = 0;
 #define EEPROM_SIGNATURE      0xA5
 // PWM
 const int pwmMaxValue = 100;
+
+
 //
 void setup() {
   //Serial.begin(9600); // No Longer can be used as uart (RX/TX, pin0, pin1) pins used for digital ouptputs
@@ -266,11 +268,8 @@ void drawItem() {
   tft.setTextSize(1);
   for (int i = 0; i < 3; i++) {
     uint16_t color = ST77XX_GREEN;
-   // if (editMode && i == currentParam) {
-   //   color = tft.color565(255, 0, 0); // Highlighted blue
-   // }
     int barY = 60 + i * 16;
-    
+    //
     redrawParam(i, barY, color);
   }
 }
@@ -318,10 +317,6 @@ int loadLastSelectedEffect() {
 }
 
 // Updates the digital outputs based on encoder clicks.
-// A4-A6 represent a binary value for every 8 clicks.
-// A7 turns HIGH after the first 8 clicks.
-// A8 turns HIGH after 16 clicks and resets A7.
-// After position 24, all outputs reset to LOW.
 void updateOutputs(int prevItem, int currItem) {
     int stepGroup = currItem / 8;     // Determine the current group of 8 clicks.
     int stepPosition = currItem % 8;  // Get position within the current group of 8 clicks.
