@@ -4,24 +4,14 @@
 #include <EEPROM.h>
 #include <Bounce2.h>
 
-#define DEBUG 0    // ON/OFF switch
-
-#if DEBUG == 1
-#define debug(x)   Serial.print(x)
-#define debugln(x) Serial.println(x)
-#else
-#define debug(x)
-#define debugln(x)
-#endif
-
 // OLED Display Setup
-//#define tftSclk         13 // Used in software constructor, slower, but allows to select pins instead of D13 
-//#define tftMosi         11 // same as above
+//#define tftSclk       13 // Used in software constructor, slower, but allows to re-program mosi and sclk to other pins
+//#define tftMosi       11 // same as above
 #define tftCS           10
 #define tftRST           9
 #define tftDC            8
+//
 Adafruit_ST7735 tft = Adafruit_ST7735(tftCS, tftDC, tftRST);
-//Adafruit_ST7735(int8_t cs, int8_t dc, int8_t mosi, int8_t sclk, int8_t rst);
 // Encoder Pins
 #define pindebouncerCW   4 // switched with 3 as 4 doesn't have PWM
 #define pinEncoderCCW    2 
@@ -40,7 +30,6 @@ Adafruit_ST7735 tft = Adafruit_ST7735(tftCS, tftDC, tftRST);
 #define pinRom2          1 // A6 A7 cannot be used w/ digitalWrite()
 #define pinRomEnable     7
 //
-//const int outputPins[] = {pinRom2, pinRom1, pinS2, pinS1, pinS0};  // 
 const int outputPins[] = {pinS0, pinS1, pinS2, pinRom1, pinRom2, pinRomEnable};
 
 // Encoder Setup
@@ -80,8 +69,7 @@ unsigned long lastInteractionTime = 0;
 const int pwmMaxValue = 100;
 //
 void setup() {
-  // Serial for debugging
-  //Serial.begin(9600);
+  //Serial.begin(9600); // No Longer can be used as uart (RX/TX, pin0, pin1) pins used for digital ouptputs
 
   // Initialize OLED
   tft.initR(INITR_BLACKTAB);
@@ -107,7 +95,7 @@ void setup() {
   pinMode(pinPOT2, OUTPUT);  //POT2 PWM
   pinMode(pinPOT3, OUTPUT);  //POT3 PWM
   //
-  String names[] = { //24
+  String names[] = {
     "CHORUS.0","REVERB.a0","REVERB.b0","Tremo.a0","Tremo.b0","FLANGER.0","PITCH.0","DISTORT.0",
     "CHORUS.1","REVERB.a1","REVERB.b1","Tremo.a1","Tremo.b1","FLANGER.1","Pitch.1","DISTORT.1",
     "CHORUS.2","REVERB.a2","REVERB.b2","Tremo.a2","Tremo.b2","FLANGER.2","Pitch.2","DISTORT.2"
@@ -168,14 +156,14 @@ void loop() {
       if (position >= 2) {  // 4 or 2 STEPS_PER_DETENT
           lastSelectedItem = currentItem;
           currentItem = (currentItem + 1 + 24) % 24;
-          //debugln("CW! currentItem: " + String(currentItem) + " lastSelectedItem: " + String(lastSelectedItem));
+          //
           position = 0;
           drawItem();
       } else if (position <= -2) {
           lastSelectedItem = currentItem;
-          //currentItem = (currentItem + (newPosition > lastPosition ? 1 : -1) + 24) % 24;
+          //
           currentItem = (currentItem - 1 + 24) % 24;
-          //debugln("CCW! currentItem: " + String(currentItem) + " lastSelectedItem: "  + String(lastSelectedItem));
+          //
           position = 0;
           drawItem();
       }
@@ -204,7 +192,7 @@ void loop() {
   btnParam2.update();
   if (btnParam2.fell()) {
       // update value to next click w/ + 10%  
-      tems[currentItem].params[1] = (items[currentItem].params[1] + 10) % 110;
+      items[currentItem].params[1] = (items[currentItem].params[1] + 10) % 110;
       // reset to zero when clicked after it reached max 100%
       if (items[currentItem].params[1] > 100) { items[currentItem].params[1] = 0; }
       // update user interface
@@ -219,7 +207,7 @@ void loop() {
   btnParam3.update();
   if (btnParam3.fell()) {
       // update value to next click w/ + 10%  
-      tems[currentItem].params[2] = (items[currentItem].params[2] + 10) % 110;
+      items[currentItem].params[2] = (items[currentItem].params[2] + 10) % 110;
       // reset to zero when clicked after it reached max 100%
       if (items[currentItem].params[2] > 100) { items[currentItem].params[2] = 0; }
       // update user interface
