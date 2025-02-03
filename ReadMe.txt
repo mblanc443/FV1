@@ -1,5 +1,7 @@
-Device designed as embedded into a Fender Strat along w/ active humbakers pickups powered by Li-Ion rechargables.
-Encoder and 3 buttons to be used in this project. Buttons navigate every 10% per click forward only, at 100% jumps to 0% on the next click.
+// Designed by Michael Blanc <<kd2cmo>> New Jersey
+Designed as embedded into a Fender Strat along w/ active humbakers pickups powered by Li-Ion rechargables.
+Arduino Encoder and 3 buttons to be used in this project. 
+Buttons navigate every 10% per click forward only, at 100% jumps to 0% on the next click.
 
 Connections 1.8" ST7735 to Arduino Nano:
 OLED    Arduino Nano
