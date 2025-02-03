@@ -1,4 +1,4 @@
-// Design by Michael Blanc
+// Designed by Michael Blanc <<kd2cmo>> New Jersey
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
 #include <SPI.h>
