@@ -23,7 +23,7 @@ Adafruit_ST7735 tft = Adafruit_ST7735(tftCS, tftDC, tftRST);
 #define pinPOT1          3 // Pot1 PWM. Only D3,D5,D6,D9,D10,D11 can generate PWM signals using analogWrite()
 #define pinPOT2          5 // Pot2 PWM
 #define pinPOT3          6 // Pot3 PWM
-// Digital Outputs
+// Digital Outputs Rom Select
 #define pinS0           A3
 #define pinS1           A4
 #define pinS2           A5
@@ -135,6 +135,7 @@ void setup() {
   // Draw the initial screen
   drawFrame();
   drawItem();
+  updatePotOutputs(currentItem);
 }
 
 // LOOP
@@ -227,11 +228,6 @@ void applyPWM(int value, int pin) {
     analogWrite(pin, pwm);
 }
 
-// Function to calculate voltage (0-3.3V) - using for debugging
-float calculateVoltage(int value) {
-    return map(value, 0, pwmMaxValue, 0, 330) / 100.0;  // 3.3V scaling
-}
-
 // draws non-updateable parts like frame and details 
 void drawFrame() {
   // draw details
@@ -321,9 +317,8 @@ void updateOutputs(int prevItem, int currItem) {
     int stepGroup = currItem / 8;     // Determine the current group of 8 clicks.
     int stepPosition = currItem % 8;  // Get position within the current group of 8 clicks.
 
-    // Set A4-A6 (0-7 in binary)
+    // Set A4-A6
     for (int i = 0; i < 3; i++) {
-        //digitalWrite(outputPins[i], (stepGroup & (1 << i)) ? HIGH : LOW);
         digitalWrite(outputPins[i], (stepPosition >> i) & 1);  // Binary output
     }
 
@@ -365,4 +360,10 @@ void updateOutputs(int prevItem, int currItem) {
     } 
     // 
     delayMicroseconds(5);  // Allow pin states to sett
+}
+
+void updatePotOutputs(int currItem) {
+    applyPWM(items[currItem].params[0], pinPOT1);
+    applyPWM(items[currItem].params[1], pinPOT2);
+    applyPWM(items[currItem].params[2], pinPOT3);
 }
