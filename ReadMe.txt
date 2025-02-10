@@ -32,6 +32,6 @@ Outputs:
 S0   - A3  // controls selection of effects
 S1   - A4
 S2   - A5
-Rom1 -  0  // selects ext ROMs
-Rom2 -  1
+Rom1 - D0  // selects ext ROMs
+Rom2 - D1
 ExtRom Enable - 7 // Switches between internal and external ROMs
