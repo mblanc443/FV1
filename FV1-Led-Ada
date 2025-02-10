@@ -30,6 +30,15 @@ Adafruit_ST7735 tft = Adafruit_ST7735(tftCS, tftDC, tftRST);
 #define pinRom1          0 // A6 A7 cannot be used w/ digitalWrite()
 #define pinRom2          1 // A6 A7 cannot be used w/ digitalWrite()
 #define pinRomEnable     7
+// Button Bypass
+#define pinButtonBypass     A7 // Encoder button connected to A7
+#define btnBypassThreshold 500 // Midpoint to detect HIGH or LOW state
+#define debounceDelay      50  // Debounce time in milliseconds
+
+bool lastButtonState = HIGH;
+bool buttonBypassState     = HIGH;
+unsigned long lastDebounceTime = 0;
+
 //
 const int outputPins[] = {pinS0, pinS1, pinS2, pinRom1, pinRom2, pinRomEnable};
 
@@ -68,7 +77,7 @@ unsigned long lastInteractionTime = 0;
 // PWM
 const int pwmMaxValue = 100;
 
-//
+// SETUP
 void setup() {
   //Serial.begin(9600); // No Longer can be used as uart (RX/TX, pin0, pin1) pins used for digital ouptputs
 
@@ -137,6 +146,7 @@ void setup() {
   updatePotOutputs(currentItem);
 }
 
+
 // LOOP
 void loop() { 
   static int lastPosition = -1;
@@ -170,7 +180,7 @@ void loop() {
       lastPosition = newPosition;
       // update all outputs
       updateOutputs(lastSelectedItem, currentItem);
-      saveLastSelectedEffect(currentItem);
+      saveLastSelectedEffect(lastSelectedItem);
   }
 
   //
@@ -217,6 +227,9 @@ void loop() {
       // PWM & map to output 3.3v
       applyPWM(items[currentItem].params[2], pinPOT3);  
   }
+  
+  // Set to BYPASS button
+  updateBypassButton(currentItem);
 }
 
 // Function to convert 0-100 to PWM (0-255) and apply to pin
@@ -296,7 +309,7 @@ void loadParameters() {
   for (int i = 0; i < 24; i++) {
     for (int j = 0; j < 3; j++) {
       int addr = EEPROM_PARAMS_START_ADDR + i * 3 + j; // Calculate address
-      items[i].params[j] = EEPROM.read(addr); // Load saved parameter
+      items[i].params[j] = EEPROM.read(addr);          // Load saved parameter
     }
   }
 }
@@ -363,4 +376,37 @@ void updatePotOutputs(int currItem) {
     applyPWM(items[currItem].params[0], pinPOT1);
     applyPWM(items[currItem].params[1], pinPOT2);
     applyPWM(items[currItem].params[2], pinPOT3);
+}
+
+//
+void updateBypassButton(int currItem) {
+    static int prevSelectedItem = -1;
+    int buttonValue = analogRead(pinButtonBypass);  // Read analog input
+    bool currState = buttonValue < btnBypassThreshold ? LOW : HIGH;
+    // Debounce logic
+    if (currState != lastButtonState) { lastDebounceTime = millis(); }  // Reset timer when state changes
+    if ((millis() - lastDebounceTime) > debounceDelay) {
+        if (currState != buttonBypassState) {
+            // Button pressed:
+            prevSelectedItem = currItem;
+            currItem = 6;
+            buttonBypassState = currState;
+            // Pressed
+            if (buttonBypassState == true) {
+              // update all outputs
+              updateOutputs(prevSelectedItem, currItem);
+              saveLastSelectedEffect(prevSelectedItem);
+              //
+            } else { // Relesed
+              //
+              currItem = prevSelectedItem;
+              prevSelectedItem = 6;
+              updateOutputs(prevSelectedItem, currItem);
+              saveLastSelectedEffect(prevSelectedItem); 
+
+            }
+        }
+    }
+    //
+    lastButtonState = currState;  // Update last state
 }
