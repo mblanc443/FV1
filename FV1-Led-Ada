@@ -170,7 +170,7 @@ void loop() {
       lastPosition = newPosition;
       // update all outputs
       updateOutputs(lastSelectedItem, currentItem);
-      saveLastSelectedEffect(lastSelectedItem);
+      saveLastSelectedEffect(currentItem);
   }
 
   //
