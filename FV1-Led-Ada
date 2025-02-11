@@ -233,14 +233,14 @@ void loop() {
       latchedState = !latchedState;  // Toggle latched state
       if (latchedState) {
           lastSelectedItem = currentItem; // Save previosly used effect before going to bypass
-          currentItem = 6;                // Set to BYPASS 
+          currentItem = 5;                // Set to BYPASS 
           drawItem();
           updateOutputs(lastSelectedItem, currentItem);
           saveLastSelectedEffect(lastSelectedItem);
       } else { //BYPASS OFF - restore
           //
           currentItem = lastSelectedItem;
-          lastSelectedItem = 6;
+          lastSelectedItem = 5;
           drawItem();
           updateOutputs(lastSelectedItem, currentItem);
           saveLastSelectedEffect(lastSelectedItem); 
