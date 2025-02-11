@@ -31,14 +31,9 @@ Adafruit_ST7735 tft = Adafruit_ST7735(tftCS, tftDC, tftRST);
 #define pinRom2          1 // A6 A7 cannot be used w/ digitalWrite()
 #define pinRomEnable     7
 // Button Bypass
-#define pinButtonBypass     A7 // Encoder button connected to A7
-#define btnBypassThreshold 500 // Midpoint to detect HIGH or LOW state
-#define debounceDelay      50  // Debounce time in milliseconds
-
-bool lastButtonState = HIGH;
-bool buttonBypassState     = HIGH;
-unsigned long lastDebounceTime = 0;
-
+#define pinButtonBypass 12 // Encoder button connected to
+#define DEBOUNCE_DELAY  50 // Debounce time in milliseconds
+bool latchedState   = LOW; // Stores the toggled state
 //
 const int outputPins[] = {pinS0, pinS1, pinS2, pinRom1, pinRom2, pinRomEnable};
 
@@ -50,6 +45,8 @@ Bounce btnParam2    = Bounce();
 Bounce btnParam3    = Bounce(); 
 Bounce debouncerCW  = Bounce();
 Bounce debouncerCCW = Bounce();
+Bounce btnBypass    = Bounce();
+
 // State Transition Table (determines direction)
 const int8_t stateTable[] = {
   0, -1, 1, 0,
@@ -85,21 +82,23 @@ void setup() {
   tft.initR(INITR_BLACKTAB);
   tft.setRotation(1); // Horizontal mode
   tft.fillScreen(ST77XX_BLACK);
-
   // Configure encoder and buttons 
   pinMode(pindebouncerCW,  INPUT_PULLUP); // set up clockwise encoder rotation 
   pinMode(pinEncoderCCW,   INPUT_PULLUP); // set up ounter clockwise encoder rotation
   pinMode(pinButtonParam1, INPUT_PULLUP); // Enable internal pull-up for button on A0
   pinMode(pinButtonParam2, INPUT_PULLUP); // Enable internal pull-up for button on A1
   pinMode(pinButtonParam3, INPUT_PULLUP); // Enable internal pull-up for button on A2
+  pinMode(pinButtonBypass, INPUT_PULLUP); // Enable internal pull-up resistor
   // attach bounce objects to pins
   debouncerCW.attach(pindebouncerCW);
-  debouncerCW.interval(15);               // Debounce time in ms
+  debouncerCW.interval(15);           // Debounce time in ms
   debouncerCCW.attach(pinEncoderCCW);
-  debouncerCCW.interval(15);              // Debounce time in ms
+  debouncerCCW.interval(15);          // Debounce time in ms
   btnParam1.attach(pinButtonParam1);
   btnParam2.attach(pinButtonParam2);
   btnParam3.attach(pinButtonParam3);
+  btnBypass.attach(pinButtonBypass);
+  btnBypass.interval(DEBOUNCE_DELAY); // 50
   //
   pinMode(pinPOT1, OUTPUT);  //POT1 PWM
   pinMode(pinPOT2, OUTPUT);  //POT2 PWM
@@ -149,7 +148,7 @@ void setup() {
 
 // LOOP
 void loop() { 
-  static int lastPosition = -1;
+  static int lastPosition     = -1;
   static int lastSelectedItem = -1;
   //  
   debouncerCW.update();
@@ -228,8 +227,26 @@ void loop() {
       applyPWM(items[currentItem].params[2], pinPOT3);  
   }
   
-  // Set to BYPASS button
-  updateBypassButton(currentItem);
+  // Set to BYPASS button - encoder's button
+  btnBypass.update();
+  if (btnBypass.fell()) {
+      latchedState = !latchedState;  // Toggle latched state
+      if (latchedState) {
+          lastSelectedItem = currentItem; // Save previosly used effect before going to bypass
+          currentItem = 6;                // Set to BYPASS 
+          drawItem();
+          updateOutputs(lastSelectedItem, currentItem);
+          saveLastSelectedEffect(lastSelectedItem);
+      } else { //BYPASS OFF - restore
+          //
+          currentItem = lastSelectedItem;
+          lastSelectedItem = 6;
+          drawItem();
+          updateOutputs(lastSelectedItem, currentItem);
+          saveLastSelectedEffect(lastSelectedItem); 
+      }
+  }
+
 }
 
 // Function to convert 0-100 to PWM (0-255) and apply to pin
@@ -256,7 +273,6 @@ void drawFrame() {
   }
 }
 
-//
 void drawItem() {
   // Centered Title (Effect Number and Name)
   tft.setTextColor(tft.color565(255, 0, 255)); //ST77XX_RED);
@@ -344,6 +360,7 @@ void updateOutputs(int prevItem, int currItem) {
     } else if (currItem >=0 && currItem <8) {
             digitalWrite(pinRomEnable, LOW);
     }
+    // checking direction CW - CCW
     if ( prevItem < currItem ) { // UP
       // send pulse to FV1 to switch to ext Rom
       if (currItem == 8 || currItem == 16) {   // Set A8 LOW after 16 clicks, while A7 resets.
@@ -376,37 +393,4 @@ void updatePotOutputs(int currItem) {
     applyPWM(items[currItem].params[0], pinPOT1);
     applyPWM(items[currItem].params[1], pinPOT2);
     applyPWM(items[currItem].params[2], pinPOT3);
-}
-
-//
-void updateBypassButton(int currItem) {
-    static int prevSelectedItem = -1;
-    int buttonValue = analogRead(pinButtonBypass);  // Read analog input
-    bool currState = buttonValue < btnBypassThreshold ? LOW : HIGH;
-    // Debounce logic
-    if (currState != lastButtonState) { lastDebounceTime = millis(); }  // Reset timer when state changes
-    if ((millis() - lastDebounceTime) > debounceDelay) {
-        if (currState != buttonBypassState) {
-            // Button pressed:
-            prevSelectedItem = currItem;
-            currItem = 6;
-            buttonBypassState = currState;
-            // Pressed
-            if (buttonBypassState == true) {
-              // update all outputs
-              updateOutputs(prevSelectedItem, currItem);
-              saveLastSelectedEffect(prevSelectedItem);
-              //
-            } else { // Relesed
-              //
-              currItem = prevSelectedItem;
-              prevSelectedItem = 6;
-              updateOutputs(prevSelectedItem, currItem);
-              saveLastSelectedEffect(prevSelectedItem); 
-
-            }
-        }
-    }
-    //
-    lastButtonState = currState;  // Update last state
 }
