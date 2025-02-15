@@ -64,7 +64,7 @@ Item items[24];
 
 int currentItem   = 0; // Last selected effect index
 int currentParam  = 0;
-unsigned long lastInteractionTime = 0;
+int lastSelectedItem = -1;
 
 // EEPROM Addresses
 #define EEPROM_INIT_ADDR             0
@@ -132,7 +132,7 @@ void setup() {
     }
     currentItem = 0;            // Default to first effect
     saveParameters();           // Save all parameters to EEPROM
-    saveLastSelectedEffect(currentItem);         // Save initially selected effect as first
+    saveLastSelectedEffect();         // Save initially selected effect as first
     EEPROM.write(EEPROM_INIT_ADDR, EEPROM_INIT); // Write INIT
   } else {
     // Load all parameters and last selected effect from EEPROM
@@ -142,14 +142,13 @@ void setup() {
   // Draw the initial screen
   drawFrame();
   drawItem();
-  updatePotOutputs(currentItem);
+  updatePotOutputs();
 }
 
 
 // LOOP
 void loop() { 
   static int lastPosition     = -1;
-  static int lastSelectedItem = -1;
   //  
   debouncerCW.update();
   debouncerCCW.update();
@@ -178,8 +177,8 @@ void loop() {
       //    
       lastPosition = newPosition;
       // update all outputs
-      updateOutputs(lastSelectedItem, currentItem);
-      saveLastSelectedEffect(lastSelectedItem);
+      updateOutputs();
+      saveLastSelectedEffect();
   }
 
   //
@@ -190,9 +189,9 @@ void loop() {
       // reset to zero when clicked after it reached max 100%
       if (items[currentItem].params[0] > 100) { items[currentItem].params[0] = 0; }
       // update user interface
-      redrawParam(0, 60, tft.color565(255, 0, 0));
+      redrawParam(0, 60);
       // update eeprom
-      saveParam(currentItem, 0);
+      saveParam(0);
       // PWM & map to output 3.3v
       applyPWM(items[currentItem].params[0], pinPOT1);
   }
@@ -205,9 +204,9 @@ void loop() {
       // reset to zero when clicked after it reached max 100%
       if (items[currentItem].params[1] > 100) { items[currentItem].params[1] = 0; }
       // update user interface
-      redrawParam(1, 76, tft.color565(255, 0, 0));
+      redrawParam(1, 76);
       // update eeprom
-      saveParam(currentItem, 1);
+      saveParam(1);
       // PWM & map to output 3.3v
       applyPWM(items[currentItem].params[1], pinPOT2);
   }
@@ -220,9 +219,9 @@ void loop() {
       // reset to zero when clicked after it reached max 100%
       if (items[currentItem].params[2] > 100) { items[currentItem].params[2] = 0; }
       // update user interface
-      redrawParam(2, 92, tft.color565(255, 0, 0));
+      redrawParam(2, 92); //
       // update eeprom
-      saveParam(currentItem, 2);
+      saveParam(2);
       // PWM & map to output 3.3v
       applyPWM(items[currentItem].params[2], pinPOT3);  
   }
@@ -235,15 +234,15 @@ void loop() {
           lastSelectedItem = currentItem; // Save previosly used effect before going to bypass
           currentItem = 5;                // Set to BYPASS 
           drawItem();
-          updateOutputs(lastSelectedItem, currentItem);
-          saveLastSelectedEffect(lastSelectedItem);
+          updateOutputs();
+          saveLastSelectedEffect();
       } else { //BYPASS OFF - restore
           //
           currentItem = lastSelectedItem;
           lastSelectedItem = 5;
           drawItem();
-          updateOutputs(lastSelectedItem, currentItem);
-          saveLastSelectedEffect(currentItem); 
+          updateOutputs();
+          saveLastSelectedEffect(); 
       }
   }
 
@@ -275,16 +274,20 @@ void drawFrame() {
 
 void drawItem() {
   // Centered Title (Effect Number and Name)
-  tft.setTextColor(tft.color565(255, 0, 255)); //ST77XX_RED);
+  tft.setTextColor(ST77XX_MAGENTA); 
   tft.setTextSize(2);
 
-  String effectText = String(currentItem + 1) + "." + items[currentItem].name;
+  //String effectText = String(currentItem + 1) + "." + items[currentItem].name;
   int textX = 10;
   // erase previous info
-  tft.fillRect(5,5,150,50,tft.color565(0, 0, 0));
+  tft.fillRect(5,5,150,50,ST77XX_BLACK);
   // print current effect
   tft.setCursor(textX, 12);
-  tft.println(effectText);
+
+  char buffer[20];  // Adjust size based on max item name length
+  snprintf(buffer, sizeof(buffer), "%d.%s", currentItem + 1, items[currentItem].name);
+  tft.println(buffer);
+//tft.println(String(currentItem + 1) + "." + items[currentItem].name); // effectText
 
   // Parameters Display with Horizontal Bars
   tft.setTextSize(1);
@@ -292,31 +295,31 @@ void drawItem() {
     uint16_t color = ST77XX_GREEN;
     int barY = 60 + i * 16;
     //
-    redrawParam(i, barY, color);
+    redrawParam(i, barY);
   }
 }
 
-void redrawParam(int param, int y, int16_t color) {
+void redrawParam(int param, int y) {
     tft.setTextColor(ST77XX_WHITE);
-    tft.fillRect(21, y+1, 98, 6, tft.color565(0, 0, 0)); // erase prev. data
-    tft.fillRect(21, y+1, items[currentItem].params[param]-2, 4, color); // Horizontal blue bar
+    tft.fillRect(21, y+1, 98, 6, ST77XX_BLACK); // erase prev. data
+    tft.fillRect(21, y+1, items[currentItem].params[param]-2, 4, ST77XX_GREEN); // Horizontal blue bar
     // erase prev. percent number
-    tft.fillRect(126, y, 20, 10, tft.color565(0, 0, 0)); 
+    tft.fillRect(126, y, 20, 10, ST77XX_BLACK); 
     tft.setCursor(128, y);                               // Right of bar
     tft.print(items[currentItem].params[param]);         // number of percents of the right
     tft.print("%");
 }
 
-void saveParam(int item, int param) {
-  int addr = EEPROM_PARAMS_START_ADDR + item * 3 + param; // Calculate address
-  EEPROM.update(addr, items[item].params[param]); // Save only if value changes
+void saveParam(int param) {
+  int addr = EEPROM_PARAMS_START_ADDR + currentItem * 3 + param; // Calculate address
+  EEPROM.update(addr, items[currentItem].params[param]); // Save only if value changes
 }
 
 void saveParameters() {
   for (int i = 0; i < 24; i++) {
     for (int j = 0; j < 3; j++) {
-      int addr = EEPROM_PARAMS_START_ADDR + i * 3 + j; // Calculate address
-      EEPROM.update(addr, items[i].params[j]); // Save only if value changes
+      //int addr = EEPROM_PARAMS_START_ADDR + i * 3 + j; // Calculate address
+      EEPROM.update(EEPROM_PARAMS_START_ADDR + i * 3 + j, items[i].params[j]); // Save only if value changes
     }
   }
 }
@@ -324,14 +327,14 @@ void saveParameters() {
 void loadParameters() {
   for (int i = 0; i < 24; i++) {
     for (int j = 0; j < 3; j++) {
-      int addr = EEPROM_PARAMS_START_ADDR + i * 3 + j; // Calculate address
-      items[i].params[j] = EEPROM.read(addr);          // Load saved parameter
+      //int addr = EEPROM_PARAMS_START_ADDR + i * 3 + j; // Calculate address
+      items[i].params[j] = EEPROM.read(EEPROM_PARAMS_START_ADDR + i * 3 + j);          // Load saved parameter
     }
   }
 }
 
-void saveLastSelectedEffect(int currItem) {
-  EEPROM.update(EEPROM_LAST_SEL_EFFECT_ADDR, currItem);
+void saveLastSelectedEffect() {
+  EEPROM.update(EEPROM_LAST_SEL_EFFECT_ADDR, currentItem);
 }
 
 int loadLastSelectedEffect() {
@@ -339,9 +342,9 @@ int loadLastSelectedEffect() {
 }
 
 // Updates the digital outputs based on encoder clicks.
-void updateOutputs(int prevItem, int currItem) {
-    int stepGroup = currItem / 8;     // Determine the current group of 8 clicks.
-    int stepPosition = currItem % 8;  // Get position within the current group of 8 clicks.
+void updateOutputs() {
+    int stepGroup = currentItem / 8;     // Determine the current group of 8 clicks.
+    int stepPosition = currentItem % 8;  // Get position within the current group of 8 clicks.
 
     // Set A4-A6
     for (int i = 0; i < 3; i++) {
@@ -349,37 +352,37 @@ void updateOutputs(int prevItem, int currItem) {
     }
 
     // FV <-> ROM1
-    if (currItem >= 8 && currItem < 16) {      // ROM1
+    if (currentItem >= 8 && currentItem < 16) {      // ROM1
         digitalWrite(pinRom2, HIGH);           // Set A8 HIGH after 16 clicks, while A7 resets.
         digitalWrite(pinRom1, LOW );           // Set A7 HIGH after 8 clicks.
         // ROM1 <-> ROM2
-    } else if (currItem >= 16 && currItem < 24) { // ROM2
+    } else if (currentItem >= 16 && currentItem < 24) { // ROM2
             digitalWrite(pinRomEnable, HIGH);
             digitalWrite(pinRom1, HIGH);         // Set A7 HIGH in the range 0-7, 8-15
             digitalWrite(pinRom2, LOW );                                                
-    } else if (currItem >=0 && currItem <8) {
+    } else if (currentItem >=0 && currentItem <8) {
             digitalWrite(pinRomEnable, LOW);
     }
     // checking direction CW - CCW
-    if ( prevItem < currItem ) { // UP
+    if ( lastSelectedItem < currentItem ) { // UP
       // send pulse to FV1 to switch to ext Rom
-      if (currItem == 8 || currItem == 16) {   // Set A8 LOW after 16 clicks, while A7 resets.
+      if (currentItem == 8 || currentItem == 16) {   // Set A8 LOW after 16 clicks, while A7 resets.
           digitalWrite(pinRomEnable, LOW);
           delay(15); 
           digitalWrite(pinRomEnable, HIGH);
       } else { 
-          if (currItem >= 0 && currItem < 8) {
+          if (currentItem >= 0 && currentItem < 8) {
             digitalWrite(pinRom1, HIGH);
             digitalWrite(pinRom2, HIGH); 
           }
       }
     } else { // DOWN
-      if (currItem == 15 || currItem == 23) {
+      if (currentItem == 15 || currentItem == 23) {
             digitalWrite(pinRomEnable, LOW);
             delay(15); 
             digitalWrite(pinRomEnable, HIGH);
         } else { 
-          if (currItem >= 0 && currItem < 8) {
+          if (currentItem >= 0 && currentItem < 8) {
             digitalWrite(pinRom1, HIGH);
             digitalWrite(pinRom2, HIGH); 
           }
@@ -389,8 +392,8 @@ void updateOutputs(int prevItem, int currItem) {
     delayMicroseconds(5);  // Allow pin states to sett
 }
 
-void updatePotOutputs(int currItem) {
-    applyPWM(items[currItem].params[0], pinPOT1);
-    applyPWM(items[currItem].params[1], pinPOT2);
-    applyPWM(items[currItem].params[2], pinPOT3);
+void updatePotOutputs() {
+    applyPWM(items[currentItem].params[0], pinPOT1);
+    applyPWM(items[currentItem].params[1], pinPOT2);
+    applyPWM(items[currentItem].params[2], pinPOT3);
 }
