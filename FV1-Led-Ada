@@ -57,7 +57,7 @@ const int8_t stateTable[] = {
 
 // Array Definition
 struct Item {
-  String name;
+  const char* name; // Use a pointer to a constant char array
   int params[3];
 };
 Item items[24];
@@ -104,12 +104,12 @@ void setup() {
   pinMode(pinPOT2, OUTPUT);  //POT2 PWM
   pinMode(pinPOT3, OUTPUT);  //POT3 PWM
   //
-  String names[] = {
-    "CHORUS.0","REVERB.a0","REVERB.b0","Tremo.a0","Tremo.b0","FLANGER.0","PITCH.0","DISTORT.0",
-    "CHORUS.1","REVERB.a1","REVERB.b1","Tremo.a1","Tremo.b1","FLANGER.1","Pitch.1","DISTORT.1",
-    "CHORUS.2","REVERB.a2","REVERB.b2","Tremo.a2","Tremo.b2","FLANGER.2","Pitch.2","DISTORT.2"
+  const char* const names[24] = {
+    "CHORUS.0", "REVERB.a0", "REVERB.b0", "TREMOLO.a0", "TREMOLO.b0", "BYPASS", "PITCH.0", "DISTORT.0",
+    "CHORUS.1", "REVERB.a1", "REVERB.b1", "TREMOLO.a1", "TREMOLO.b1", "FLANGER.1", "PITCH.1", "DISTORT.1",
+    "CHORUS.2", "REVERB.a2", "REVERB.b2", "TREMOLO.a2", "TREMOLO.b2", "FLANGER.2", "PITCH.2", "DISTORT.2"
   };
-
+  // load values for names
   for (int i = 0; i < 24; i++) {
     items[i].name = names[i];
   }
