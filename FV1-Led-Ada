@@ -355,6 +355,7 @@ void updateOutputs() {
     if (currentItem >= 8 && currentItem < 16) {      // ROM1
         digitalWrite(pinRom2, HIGH);           // Set A8 HIGH after 16 clicks, while A7 resets.
         digitalWrite(pinRom1, LOW );           // Set A7 HIGH after 8 clicks.
+        digitalWrite(pinRomEnable, HIGH);
         // ROM1 <-> ROM2
     } else if (currentItem >= 16 && currentItem < 24) { // ROM2
             digitalWrite(pinRomEnable, HIGH);
@@ -374,6 +375,7 @@ void updateOutputs() {
           if (currentItem >= 0 && currentItem < 8) {
             digitalWrite(pinRom1, HIGH);
             digitalWrite(pinRom2, HIGH); 
+            digitalWrite(pinRomEnable, LOW);
           }
       }
     } else { // DOWN
@@ -384,7 +386,8 @@ void updateOutputs() {
         } else { 
           if (currentItem >= 0 && currentItem < 8) {
             digitalWrite(pinRom1, HIGH);
-            digitalWrite(pinRom2, HIGH); 
+            digitalWrite(pinRom2, HIGH);
+            digitalWrite(pinRomEnable, LOW);
           }
       }
     } 
