@@ -27,8 +27,8 @@ Adafruit_ST7735 tft = Adafruit_ST7735(tftCS, tftDC, tftRST);
 #define pinS0           A3
 #define pinS1           A4
 #define pinS2           A5
-#define pinRom1          0 // A6 A7 cannot be used w/ digitalWrite()
-#define pinRom2          1 // A6 A7 cannot be used w/ digitalWrite()
+#define pinRom1          0 // Switched to UART pins as A6 A7 cannot be used w/ digitalWrite()
+#define pinRom2          1 // Switched to UART pins as A6 A7 cannot be used w/ digitalWrite()
 #define pinRomEnable     7
 // Button Bypass
 #define pinButtonBypass 12 // Encoder button connected to
@@ -76,7 +76,7 @@ const int pwmMaxValue = 100;
 
 // SETUP
 void setup() {
-  //Serial.begin(9600); // No Longer can be used as uart (RX/TX, pin0, pin1) pins used for digital outputs
+  //Serial.begin(9600); // No Longer can be used as uart (pin0, pin1) pins used for digital outputs
 
   // Initialize OLED
   tft.initR(INITR_BLACKTAB);
