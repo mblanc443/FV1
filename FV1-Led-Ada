@@ -181,7 +181,7 @@ void loop() {
       saveLastSelectedEffect();
   }
 
-  //
+  // update of parameter 1 of currently selected effect
   btnParam1.update();
   if (btnParam1.fell()) {
       // update value to next click w/ + 10%  
@@ -196,7 +196,7 @@ void loop() {
       applyPWM(items[currentItem].params[0], pinPOT1);
   }
 
-  //
+  // update of parameter 2 of currently selected effect
   btnParam2.update();
   if (btnParam2.fell()) {
       // update value to next click w/ + 10%  
@@ -211,7 +211,7 @@ void loop() {
       applyPWM(items[currentItem].params[1], pinPOT2);
   }
 
-  //
+  // update of parameter 3 of currently selected effect
   btnParam3.update();
   if (btnParam3.fell()) {
       // update value to next click w/ + 10%  
@@ -226,7 +226,7 @@ void loop() {
       applyPWM(items[currentItem].params[2], pinPOT3);  
   }
   
-  // Set to BYPASS button - encoder's button
+  // Set to BYPASS button - encoder's button to turn on Bypass program #6 and back
   btnBypass.update();
   if (btnBypass.fell()) {
       latchedState = !latchedState;  // Toggle latched state
@@ -276,18 +276,16 @@ void drawItem() {
   // Centered Title (Effect Number and Name)
   tft.setTextColor(ST77XX_MAGENTA); 
   tft.setTextSize(2);
-
-  //String effectText = String(currentItem + 1) + "." + items[currentItem].name;
+  //
   int textX = 10;
   // erase previous info
   tft.fillRect(5,5,150,50,ST77XX_BLACK);
   // print current effect
-  tft.setCursor(textX, 12);
+  tft.setCursor(textX, 15);
 
   char buffer[20];  // Adjust size based on max item name length
   snprintf(buffer, sizeof(buffer), "%d.%s", currentItem + 1, items[currentItem].name);
   tft.println(buffer);
-//tft.println(String(currentItem + 1) + "." + items[currentItem].name); // effectText
 
   // Parameters Display with Horizontal Bars
   tft.setTextSize(1);
