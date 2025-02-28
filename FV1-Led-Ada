@@ -356,9 +356,9 @@ void updateOutputs() {
         digitalWrite(pinRomEnable, HIGH);
         // ROM1 <-> ROM2
     } else if (currentItem >= 16 && currentItem < 24) { // ROM2
-            digitalWrite(pinRomEnable, HIGH);
             digitalWrite(pinRom1, HIGH);         // Set A7 HIGH in the range 0-7, 8-15
-            digitalWrite(pinRom2, LOW );                                                
+            digitalWrite(pinRom2, LOW );
+            digitalWrite(pinRomEnable, HIGH);
     } else if (currentItem >=0 && currentItem <8) {
             digitalWrite(pinRomEnable, LOW);
     }
@@ -367,7 +367,7 @@ void updateOutputs() {
       // send pulse to FV1 to switch to ext Rom
       if (currentItem == 8 || currentItem == 16) {   // Set A8 LOW after 16 clicks, while A7 resets.
           digitalWrite(pinRomEnable, LOW);
-          delay(15); 
+          delay(50); 
           digitalWrite(pinRomEnable, HIGH);
       } else { 
           if (currentItem >= 0 && currentItem < 8) {
@@ -379,7 +379,7 @@ void updateOutputs() {
     } else { // DOWN
       if (currentItem == 15 || currentItem == 23) {
             digitalWrite(pinRomEnable, LOW);
-            delay(15); 
+            delay(50); 
             digitalWrite(pinRomEnable, HIGH);
         } else { 
           if (currentItem >= 0 && currentItem < 8) {
